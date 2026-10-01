@@ -1,0 +1,209 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  fullName  String?
+  email     String   @unique
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts          Account[]
+  instagramAccounts InstagramAccount[]
+  contents          Content[]
+  collections       Collection[]
+  conversations     Conversation[]
+  memories          UserMemory[]
+}
+
+model Account {
+  id                String       @id @default(uuid())
+  userId            String
+  provider          AuthProvider
+  providerAccountId String
+  passwordHash      String?
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  createdAt         DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model InstagramAccount {
+  id          String   @id @default(uuid())
+  userId      String
+  igUserId    String   @unique
+  username    String
+  connectedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Content {
+  id              String       @id @default(uuid())
+  userId          String
+  type            ContentType
+  mediaType       MediaType?
+  ingestSource    IngestSource
+  sourceUrl       String
+  creatorUsername String?
+  caption         String?
+  transcript      String?
+  ocrText         String?
+  visionCaption   String?
+  hashtags        String[]
+  tags            String[]
+  thumbnailUrl    String?
+  embedding       Unsupported("vector(1536)")?
+  duplicateOfId   String?
+  deletedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duplicateOf  Content?            @relation("Duplicates", fields: [duplicateOfId], references: [id])
+  duplicates   Content[]           @relation("Duplicates")
+  collections  ContentCollection[]
+
+  @@unique([userId, sourceUrl])
+  @@index([userId, createdAt])
+  @@index([userId, ingestSource])
+}
+
+model Collection {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contents ContentCollection[]
+
+  @@unique([userId, name])
+}
+
+model ContentCollection {
+  contentId    String
+  collectionId String
+  addedAt      DateTime @default(now())
+
+  content    Content    @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([contentId, collectionId])
+  @@index([collectionId])
+}
+
+model Conversation {
+  id              String    @id @default(uuid())
+  userId          String
+  title           String?
+  summary         String?
+  lastMessageText String?
+  lastMessageAt   DateTime?
+  createdAt       DateTime  @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId, lastMessageAt])
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model UserMemory {
+  id        String       @id @default(uuid())
+  userId    String
+  content   String
+  source    MemorySource
+  isActive  Boolean      @default(true)
+  embedding Unsupported("vector(1536)")?
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+}
+
+model WebhookEvent {
+  id          String    @id @default(uuid())
+  platform    String
+  externalId  String
+  payload     Json
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([platform, externalId])
+}
+
+
+
+
+enum AuthProvider {
+  credentials
+  google
+  notion
+}
+
+enum ContentType {
+  reel
+  post
+  screenshot
+  tweet
+  notion_page
+}
+
+enum MediaType {
+  image
+  video
+  carousel
+}
+
+enum IngestSource {
+  instagram_dm
+  share_target
+  manual_upload
+  notion
+  extension
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
+enum MemorySource {
+  inferred
+  explicit
+}
