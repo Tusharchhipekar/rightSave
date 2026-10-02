@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "smoke": "bun run scripts/smoke.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
