@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-import { ne } from "zod/locales";
 dotenv.config();
 
 if (!process.env.DATABASE_URL) {
@@ -15,7 +14,7 @@ if (!process.env.REDIS_URL) {
 }
 
 if(!process.env.NODE_ENV){
-  throw new Error("NODE_URL is not set");
+  throw new Error("NODE_ENV is not set");
 }
 
 if(!process.env.JWT_ACCESS_SECRET){

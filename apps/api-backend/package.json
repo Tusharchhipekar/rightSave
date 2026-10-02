@@ -1,12 +1,32 @@
 {
-  "name": "backend",
-  "module": "index.ts",
+  "name": "@repo/api-backend",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "bun run --watch ./src/index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@repo/auth-guard": "workspace:*",
+    "@repo/db-prisma": "workspace:*",
+    "@repo/redis": "workspace:*",
+    "@repo/types": "workspace:*",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/morgan": "^1.9.10",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "kafkajs": "^2.2.4",
+    "morgan": "^1.12.1",
+    "zod": "^4.6.5"
   }
 }
