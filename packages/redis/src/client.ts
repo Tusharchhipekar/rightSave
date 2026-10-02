@@ -16,21 +16,35 @@ export async function getRedis(): Promise<RedisClient | null> {
   }
 
   connecting = (async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      client ??= createClient({
-        url,
-        socket: {
-          connectTimeout: 2000,
-          reconnectStrategy: (retries) => Math.min(retries * 200, 5000),
-        },
-      });
-      client.on("error", (err) => console.error("[redis] error:", err.message));
-      if (!client.isOpen) await client.connect();
-      return client;
+      if (!client) {
+        client = createClient({
+          url,
+          disableOfflineQueue: true,
+          socket: {
+            connectTimeout: 2000,
+            reconnectStrategy: (retries) => Math.min(retries * 200, 5000),
+          },
+        });
+        client.on("error", (err) => console.error("[redis] error:", err.message));
+      }
+
+      if (!client.isOpen) {
+        await Promise.race([
+          client.connect(),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error("connect timeout")), 2000);
+          }),
+        ]);
+      }
+
+      return client.isReady ? client : null;
     } catch (err) {
       console.error("[redis] connect failed:", (err as Error).message);
       return null;
     } finally {
+      if (timer) clearTimeout(timer);
       connecting = null;
     }
   })();
@@ -49,6 +63,11 @@ export async function redisPing(): Promise<boolean> {
 }
 
 export async function closeRedis(): Promise<void> {
-  if (client?.isOpen) await client.quit();
+  if (!client) return;
+  try {
+    await client.quit();
+  } catch {
+    client.destroy();
+  }
   client = null;
 }
