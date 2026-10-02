@@ -17,6 +17,7 @@
     "@types/express": "^5.0.6",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
-    "kafkajs": "^2.2.4"
+    "kafkajs": "^2.2.4",
+    "zod": "^4.6.5"
   }
 }

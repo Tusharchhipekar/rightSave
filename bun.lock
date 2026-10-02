@@ -108,12 +108,14 @@
       },
     },
     "packages/kafka": {
-      "name": "kafka",
+      "name": "@repo/kafka",
+      "version": "0.0.1",
       "dependencies": {
         "@types/express": "^5.0.6",
         "dotenv": "^18.0.5",
         "express": "^5.2.1",
         "kafkajs": "^2.2.4",
+        "zod": "^4.6.5",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -403,6 +405,8 @@
     "@repo/db-prisma": ["@repo/db-prisma@workspace:packages/db-prisma"],
 
     "@repo/eslint-config": ["@repo/eslint-config@workspace:packages/eslint-config"],
+
+    "@repo/kafka": ["@repo/kafka@workspace:packages/kafka"],
 
     "@repo/types": ["@repo/types@workspace:packages/types"],
 
@@ -1125,8 +1129,6 @@
     "jwa": ["jwa@2.0.1", "", { "dependencies": { "buffer-equal-constant-time": "^1.0.1", "ecdsa-sig-formatter": "1.0.11", "safe-buffer": "^5.0.1" } }, "sha512-hRF04fqJIP8Abbkq5NKGN0Bbr3JxlQ+qhZufXVr0DvujKy93ZCbXZMHDL4EOtodSbCWxOqR8MS1tXA5hwqCXDg=="],
 
     "jws": ["jws@4.0.1", "", { "dependencies": { "jwa": "^2.0.1", "safe-buffer": "^5.0.1" } }, "sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA=="],
-
-    "kafka": ["kafka@workspace:packages/kafka"],
 
     "kafkajs": ["kafkajs@2.2.4", "", {}, "sha512-j/YeapB1vfPT2iOIUn/vxdyKEuhuY2PxMBvf5JWux6iSaukAccrMtXEY/Lb7OvavDhOWME589bpLrEdnVHjfjA=="],
 
