@@ -7,11 +7,16 @@ import {
   refreshController,
   meController
 } from "../controllers/auth.controller";
+import { rateLimiter } from "../middleware/ratelimit.middleware";
+
 
 const AuthRouter: Router = Router();
 
-AuthRouter.post("/signup", signupController);
-AuthRouter.post("/signin", signinController);
+const signupLimiter = rateLimiter({ name: "signup", limit: 5, windowSeconds: 10 * 60 });
+const signinLimiter = rateLimiter({ name: "signin", limit: 10, windowSeconds: 15 * 60 });
+
+AuthRouter.post("/signup",signupLimiter, signupController);
+AuthRouter.post("/signin",signinLimiter, signinController);
 AuthRouter.post("/logout", logoutController);
 AuthRouter.post("/refresh", refreshController);
 AuthRouter.get("/me", requireAuth, meController);

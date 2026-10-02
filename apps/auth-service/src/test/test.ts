@@ -1,6 +1,12 @@
+import { getRedis } from "@repo/redis";
+
 const PORT = process.env.PORT ?? "4001";
 const ROOT = `http://localhost:${PORT}`;
 const BASE = `${ROOT}/api/v1/auth`;
+
+// Must match the limits in routes/auth.route.ts
+const SIGNUP_LIMIT = 5;
+const SIGNIN_LIMIT = 10;
 
 const suffix = Date.now();
 const user = {
@@ -40,7 +46,22 @@ const getRefreshCookie = (res: Response) => {
   return raw?.split(";")[0];
 };
 
+// Clears the signup/signin rate-limit buckets so runs don't affect each other.
+// Returns false if Redis is unreachable (limiter fails open, so limit tests can't run).
+const resetLimits = async (): Promise<boolean> => {
+  const r = await getRedis();
+  if (!r) return false;
+  const found = [
+    ...(await r.keys("rl:signup:*")),
+    ...(await r.keys("rl:signin:*")),
+  ];
+  if (found.length) await r.del(found);
+  return true;
+};
+
 const run = async () => {
+  const redisUp = await resetLimits();
+
   // health
   const health = await fetch(`${ROOT}/healthz`);
   check("healthz returns 200", health.status === 200);
@@ -134,6 +155,82 @@ const run = async () => {
     .some((c) => c.startsWith("refreshToken=;"));
   check("logout returns 200", logout.status === 200);
   check("logout clears refreshToken cookie", cleared);
+
+  // ---- rate limiting ----
+  // Invalid bodies are used on purpose: the limiter runs before validation,
+  // so each request counts, but nothing touches the DB or hashes a password.
+  if (!redisUp) {
+    console.log("SKIP  rate limit tests (Redis unreachable, limiter fails open)");
+  } else {
+    await resetLimits();
+
+    // signup: first SIGNUP_LIMIT requests pass through, next one is blocked
+    const signupStatuses: number[] = [];
+    let firstSignup: Response | undefined;
+    for (let i = 0; i < SIGNUP_LIMIT; i++) {
+      const res = await post("/signup", {});
+      if (i === 0) firstSignup = res;
+      signupStatuses.push(res.status);
+    }
+    check(
+      `signup: first ${SIGNUP_LIMIT} requests are not rate limited`,
+      signupStatuses.every((s) => s === 400),
+      signupStatuses,
+    );
+    check(
+      "signup: X-RateLimit-Remaining counts down",
+      firstSignup?.headers.get("X-RateLimit-Remaining") ===
+        String(SIGNUP_LIMIT - 1),
+      firstSignup?.headers.get("X-RateLimit-Remaining"),
+    );
+
+    const signupBlocked = await post("/signup", {});
+    check(
+      `signup: request ${SIGNUP_LIMIT + 1} returns 429`,
+      signupBlocked.status === 429,
+      signupBlocked.status,
+    );
+    check(
+      "signup: 429 includes Retry-After",
+      Number(signupBlocked.headers.get("Retry-After")) > 0,
+      signupBlocked.headers.get("Retry-After"),
+    );
+
+    // signin has its own bucket, so it must be unaffected by the signup block
+    const signinFirst = await post("/signin", {});
+    check(
+      "signin: separate bucket, not blocked by signup limit",
+      signinFirst.status === 400,
+      signinFirst.status,
+    );
+
+    // signin: SIGNIN_LIMIT total (one already sent above)
+    const signinStatuses: number[] = [signinFirst.status];
+    for (let i = 1; i < SIGNIN_LIMIT; i++) {
+      const res = await post("/signin", {});
+      signinStatuses.push(res.status);
+    }
+    check(
+      `signin: first ${SIGNIN_LIMIT} requests are not rate limited`,
+      signinStatuses.every((s) => s === 400),
+      signinStatuses,
+    );
+
+    const signinBlocked = await post("/signin", {});
+    check(
+      `signin: request ${SIGNIN_LIMIT + 1} returns 429`,
+      signinBlocked.status === 429,
+      signinBlocked.status,
+    );
+    check(
+      "signin: 429 includes Retry-After",
+      Number(signinBlocked.headers.get("Retry-After")) > 0,
+      signinBlocked.headers.get("Retry-After"),
+    );
+
+    // leave buckets clean so the next run (or manual testing) isn't blocked
+    await resetLimits();
+  }
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
