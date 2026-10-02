@@ -1,13 +1,13 @@
 {
-  "name": "auth-service",
+  "name": "@repo/auth-service",
   
   "version": "1.0.0",
   "main": "./src/index.ts",
   "types": "module",
-  "module": "",
+  "module": "./src/indexts",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch ./src/index.ts",
+    "dev": "bun run --watch ./src/index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@repo/db-prisma": "workspace:*",
+    "@repo/types":"workspace:*",
+    "@repo/redis":"workspace:*",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
