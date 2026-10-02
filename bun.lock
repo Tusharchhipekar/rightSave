@@ -25,6 +25,7 @@
     },
     "apps/auth-service": {
       "name": "auth-service",
+      "version": "1.0.0",
       "dependencies": {
         "@repo/db-prisma": "workspace:*",
         "@types/express": "^5.0.6",
@@ -117,6 +118,11 @@
     },
     "packages/types": {
       "name": "types",
+      "dependencies": {
+        "@types/express": "^5.0.6",
+        "express": "^5.2.1",
+        "zod": "^4.6.5",
+      },
       "devDependencies": {
         "@types/bun": "latest",
       },
