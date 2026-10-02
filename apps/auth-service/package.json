@@ -1,28 +1,32 @@
 {
   "name": "@repo/auth-service",
-  
   "version": "1.0.0",
   "main": "./src/index.ts",
-  "types": "module",
-  "module": "./src/indexts",
+  "types": "./src/index.ts",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch ./src/index.ts"
+    "dev": "bun run --watch ./src/index.ts",
+    "test:smoke": "bun run ./src/test/test.ts"
+
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/cookie-parser": "^1.4.10"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "@repo/auth-guard": "workspace:*",
     "@repo/db-prisma": "workspace:*",
-    "@repo/types":"workspace:*",
-    "@repo/redis":"workspace:*",
+    "@repo/redis": "workspace:*",
+    "@repo/types": "workspace:*",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
-    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
