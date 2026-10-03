@@ -79,6 +79,7 @@ model Content {
   deletedAt       DateTime?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+  status          ContentStatus @default(pending)
 
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   duplicateOf  Content?            @relation("Duplicates", fields: [duplicateOfId], references: [id])
@@ -88,6 +89,8 @@ model Content {
   @@unique([userId, sourceUrl])
   @@index([userId, createdAt])
   @@index([userId, ingestSource])
+  @@index([userId, status])
+
 }
 
 model Collection {
@@ -206,4 +209,12 @@ enum MessageRole {
 enum MemorySource {
   inferred
   explicit
+}
+
+
+enum ContentStatus {
+  pending
+  processing
+  ready
+  failed
 }

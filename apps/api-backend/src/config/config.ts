@@ -47,4 +47,10 @@ export const config = {
   KAFKA_BROKERS: process.env.KAFKA_BROKERS,
   KAFKA_CLIENT_ID: process.env.KAFKA_CLIENT_ID,
   KAFKA_SSL: process.env.KAFKA_SSL === "true",
+
+
+  ig: {
+    verifyToken: process.env.IG_VERIFY_TOKEN!,
+    appSecret: process.env.IG_APP_SECRET!,
+  },
 };

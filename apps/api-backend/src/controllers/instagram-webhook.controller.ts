@@ -1,0 +1,148 @@
+import type { Request, Response } from "express";
+import { prisma } from "@repo/db-prisma";
+import { keys, ttl, cacheGet, cacheSet, cacheDel, setNX } from "@repo/redis";
+import { publish, Topics } from "@repo/kafka";
+import { config } from "../config/config";
+
+export const verifyWebhook = (req: Request, res: Response) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode === "subscribe" && token === config.ig.verifyToken) {
+    return res.status(200).send(challenge);
+  }
+  return res.sendStatus(403);
+};
+
+export const receiveWebhook = async (req: Request, res: Response) => {
+  res.sendStatus(200);
+
+  try {
+    const body = JSON.parse((req.body as Buffer).toString("utf8"));
+    for (const entry of body.entry ?? []) {
+      for (const event of entry.messaging ?? []) {
+        await handleEvent(event).catch((err) =>
+          console.error("[ig-webhook] event failed", err)
+        );
+      }
+    }
+  } catch (err) {
+    console.error("[ig-webhook] parse failed", err);
+  }
+};
+
+async function resolveUserId(igUserId: string): Promise<string | null> {
+  const cached = await cacheGet<string>(keys.igSender(igUserId));
+  if (cached) return cached;
+
+  const account = await prisma.instagramAccount.findUnique({
+    where: { igUserId },
+    select: { userId: true },
+  });
+  if (!account) return null;
+
+  await cacheSet(keys.igSender(igUserId), account.userId, ttl.igSender);
+  return account.userId;
+}
+
+async function isDuplicate(mid: string, event: any): Promise<boolean> {
+  const first = await setNX(keys.webhook("instagram", mid), ttl.webhook);
+  if (!first) return true;
+
+  try {
+    await prisma.webhookEvent.create({
+      data: { platform: "instagram", externalId: mid, payload: event },
+    });
+    return false;
+  } catch (err: any) {
+    if (err?.code === "P2002") return true;
+    throw err;
+  }
+}
+
+async function handleEvent(event: any) {
+  const senderId: string | undefined = event?.sender?.id;
+  const message = event?.message;
+  if (!senderId || !message || message.is_echo) return;
+
+  const mid: string | undefined = message.mid;
+  if (!mid) return;
+  if (await isDuplicate(mid, event)) return;
+
+  const userId = await resolveUserId(senderId);
+  if (!userId) return;
+
+  const attachment = (message.attachments ?? []).find((a: any) =>
+    ["ig_reel", "share", "video", "image", "ig_post"].includes(a.type)
+  );
+
+  if (attachment) {
+    await handleShare(userId, senderId, attachment);
+    return;
+  }
+
+  if (typeof message.text === "string" && message.text.trim()) {
+    await handleFolderText(userId, senderId, message.text.trim());
+  }
+}
+
+async function handleShare(userId: string, senderId: string, attachment: any) {
+  const sourceUrl: string | undefined = attachment?.payload?.url;
+  if (!sourceUrl) return;
+
+  const isReel =
+    attachment.type === "ig_reel" ||
+    attachment.type === "video" ||
+    sourceUrl.includes("/reel/");
+  const type = isReel ? "reel" : "post";
+
+  let content;
+  try {
+    content = await prisma.content.create({
+      data: {
+        userId,
+        type,
+        sourceUrl,
+        ingestSource: "instagram_dm",
+        status: "pending",
+      },
+      select: { id: true },
+    });
+  } catch (err: any) {
+    if (err?.code === "P2002") return;
+    throw err;
+  }
+
+  await cacheSet(keys.igLastShare(senderId), content.id, ttl.igLastShare);
+
+  await publish({
+    topic: Topics.CONTENT_INGEST,
+    key: content.id,
+    payload: { contentId: content.id, userId, sourceUrl, type },
+  });
+}
+
+async function handleFolderText(userId: string, senderId: string, text: string) {
+  const contentId = await cacheGet<string>(keys.igLastShare(senderId));
+  if (!contentId) return;
+
+  const name = text.slice(0, 60);
+
+  const collection = await prisma.collection.upsert({
+    where: { userId_name: { userId, name } },
+    update: {},
+    create: { userId, name },
+    select: { id: true },
+  });
+
+  await prisma.contentCollection.upsert({
+    where: {
+      contentId_collectionId: { contentId, collectionId: collection.id },
+    },
+    update: {},
+    create: { contentId, collectionId: collection.id },
+  });
+
+  await cacheDel(keys.igLastShare(senderId));
+}
