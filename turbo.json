@@ -15,7 +15,22 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "NODE_ENV",
+        "DATABASE_URL",
+        "REDIS_URL",
+        "JWT_ACCESS_SECRET",
+        "JWT_REFRESH_SECRET",
+        "FRONTEND_URL",
+        "AUTH_SERVICE_PORT",
+        "API_PORT",
+        "KAFKA_BROKERS",
+        "KAFKA_CLIENT_ID",
+        "KAFKA_SSL",
+        "KAFKA_SASL_USERNAME",
+        "KAFKA_SASL_PASSWORD"
+      ]
     }
   }
 }

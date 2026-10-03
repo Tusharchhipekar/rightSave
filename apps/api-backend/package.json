@@ -17,6 +17,7 @@
   "dependencies": {
     "@repo/auth-guard": "workspace:*",
     "@repo/db-prisma": "workspace:*",
+    "@repo/kafka": "workspace:*",
     "@repo/redis": "workspace:*",
     "@repo/types": "workspace:*",
     "@types/cors": "^2.8.19",
@@ -25,7 +26,6 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
-    "kafkajs": "^2.2.4",
     "morgan": "^1.12.1",
     "zod": "^4.6.5"
   }
