@@ -5,11 +5,15 @@ export const notFound = (_req: Request, res: Response) => {
 };
 
 export const errorHandler = (
-  err: unknown,
+  err: any,
   _req: Request,
   res: Response,
   _next: NextFunction,
 ) => {
+  if (err?.type === "entity.parse.failed") {
+    return res.status(400).json({ message: "Malformed JSON body" });
+  }
+
   console.error("Unhandled error:", err);
   res
     .status(500)

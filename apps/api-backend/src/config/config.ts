@@ -29,6 +29,14 @@ if (!process.env.KAFKA_BROKERS) {
   throw new Error("KAFKA_BROKERS is not set");
 }
 
+if (!process.env.KAFKA_CLIENT_ID) {
+  throw new Error("KAFKA_CLIENT_ID is not set");
+}
+
+if (!process.env.KAFKA_SSL) {
+  throw new Error("KAFKA_SSL is not set");
+}
+
 export const config = {
   API_BACKEND_PORT: process.env.API_BACKEND_PORT,
   DATABASE_URL: process.env.DATABASE_URL,
@@ -37,4 +45,6 @@ export const config = {
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
   FRONTEND_URL: process.env.FRONTEND_URL,
   KAFKA_BROKERS: process.env.KAFKA_BROKERS,
+  KAFKA_CLIENT_ID: process.env.KAFKA_CLIENT_ID,
+  KAFKA_SSL: process.env.KAFKA_SSL === "true",
 };
