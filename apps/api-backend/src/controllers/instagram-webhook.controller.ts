@@ -1,8 +1,11 @@
 import type { Request, Response } from "express";
 import { prisma } from "@repo/db-prisma";
-import { keys, ttl, cacheGet, cacheSet, cacheDel, setNX } from "@repo/redis";
+import { keys, ttl, cacheGet, cacheSet, cacheDel, setNX, getRedis } from "@repo/redis";
 import { publish, Topics } from "@repo/kafka";
 import { config } from "../config/config";
+
+
+const LINK_CODE_RE = /^RS-[A-Z0-9]{6}$/;
 
 export const verifyWebhook = (req: Request, res: Response) => {
   const mode = req.query["hub.mode"];
@@ -62,6 +65,7 @@ async function isDuplicate(mid: string, event: any): Promise<boolean> {
 }
 
 async function handleEvent(event: any) {
+  console.log("[ig]", JSON.stringify(event));
   const senderId: string | undefined = event?.sender?.id;
   const message = event?.message;
   if (!senderId || !message || message.is_echo) return;
@@ -69,6 +73,14 @@ async function handleEvent(event: any) {
   const mid: string | undefined = message.mid;
   if (!mid) return;
   if (await isDuplicate(mid, event)) return;
+
+  const text: string =
+    typeof message.text === "string" ? message.text.trim() : "";
+
+  if (text && LINK_CODE_RE.test(text.toUpperCase())) {
+    await handleLinkCode(senderId, text.toUpperCase());
+    return;
+  }
 
   const userId = await resolveUserId(senderId);
   if (!userId) return;
@@ -82,8 +94,8 @@ async function handleEvent(event: any) {
     return;
   }
 
-  if (typeof message.text === "string" && message.text.trim()) {
-    await handleFolderText(userId, senderId, message.text.trim());
+  if (text) {
+    await handleFolderText(userId, senderId, text);
   }
 }
 
@@ -145,4 +157,36 @@ async function handleFolderText(userId: string, senderId: string, text: string) 
   });
 
   await cacheDel(keys.igLastShare(senderId));
+}
+
+async function handleLinkCode(senderId: string, code: string) {
+  const redis = await getRedis();
+  if (!redis) return;
+
+  const userId = await redis.getDel(keys.igLinkCode(code));
+  if (!userId) return;
+
+  const existing = await prisma.instagramAccount.findUnique({
+    where: { igUserId: senderId },
+    select: { userId: true },
+  });
+
+  if (existing) {
+    if (existing.userId !== userId) {
+      console.warn("[ig-link] igUserId already linked to another user");
+    }
+    return;
+  }
+
+  try {
+    await prisma.instagramAccount.create({
+      data: { userId, igUserId: senderId },
+    });
+  } catch (err: any) {
+    if (err?.code === "P2002") return;
+    throw err;
+  }
+
+  await cacheDel(keys.igSender(senderId));
+  console.log("[ig-link] linked", senderId, "->", userId);
 }

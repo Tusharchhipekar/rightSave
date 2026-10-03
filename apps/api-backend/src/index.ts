@@ -3,6 +3,8 @@ import morgan from "morgan";
 import cors from "cors";
 import { config } from "./config/config";
 import protectedRouter from "./routes/protected.route";
+import IGWebhookRouter from "./routes/instagram-webhook.routes";
+import instagramLinkRoutes from "./routes/instagram-link.routes";
 import { notFound, errorHandler } from "./middlewares/error.middleware";
 import { prisma } from "@repo/db-prisma";
 import { getRedis, redisPing, closeRedis } from "@repo/redis";
@@ -11,6 +13,7 @@ import { ensureTopics, ALL_TOPICS, disconnectProducer } from "@repo/kafka";
 const app = express();
 // TODO(k8s): app.set("trust proxy", <real hop count>) once deployed behind an ingress.
 app.use(morgan("dev"));
+app.use("/webhooks/instagram",IGWebhookRouter );
 app.use(
   express.json({
     verify: (req, _res, buf) => {
@@ -54,6 +57,7 @@ const redis = await withTimeout(redisPing()).catch(() => false);
 });
 
 app.use("/api/v1", protectedRouter);
+app.use("/api/v1/instagram", instagramLinkRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

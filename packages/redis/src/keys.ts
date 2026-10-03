@@ -10,6 +10,7 @@ export const keys = {
   rateLimit: (route: string, id: string) => `rl:${route}:${id}`,
   webhook: (platform: string, externalId: string) => `wh:${platform}:${externalId}`,
   igLastShare: (igUserId: string) => `ig:lastshare:${igUserId}`,
+  igLinkCode: (code: string) => `ig:linkcode:${code}`,
 };
 
 export const ttl = {
@@ -18,4 +19,5 @@ export const ttl = {
   oembed: 24 * 60 * 60,
   webhook: 48 * 60 * 60,
   igLastShare: 60,
+  igLinkCode: 10 * 60,
 };

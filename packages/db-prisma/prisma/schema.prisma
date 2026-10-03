@@ -51,7 +51,7 @@ model InstagramAccount {
   id          String   @id @default(uuid())
   userId      String
   igUserId    String   @unique
-  username    String
+  username    String?
   connectedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

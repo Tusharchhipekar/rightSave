@@ -1,0 +1,50 @@
+import crypto from "crypto";
+import type { Request, Response } from "express";
+import { getRedis, keys, ttl } from "@repo/redis";
+
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+const generateCode = (): string => {
+    const bytes = crypto.randomBytes(6);
+    let out = "";
+    for (const b of bytes) out += ALPHABET.charAt(b % ALPHABET.length);
+    return `RS-${out}`;
+  };
+
+export const createLinkCode = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized", code: "NO_USER" });
+    }
+
+    const redis = await getRedis();
+    if (!redis) {
+      return res
+        .status(503)
+        .json({ message: "Service unavailable", code: "REDIS_DOWN" });
+    }
+
+    for (let i = 0; i < 5; i++) {
+      const code = generateCode();
+      const ok = await redis.set(keys.igLinkCode(code), userId, {
+        NX: true,
+        EX: ttl.igLinkCode,
+      });
+      if (ok === "OK") {
+        return res
+          .status(201)
+          .json({ code, expiresInSeconds: ttl.igLinkCode });
+      }
+    }
+
+    return res
+      .status(500)
+      .json({ message: "Could not generate code", code: "CODE_GEN_FAILED" });
+  } catch (err) {
+    console.error("[ig-link] createLinkCode failed", err);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", code: "INTERNAL" });
+  }
+};

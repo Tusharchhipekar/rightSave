@@ -37,6 +37,14 @@ if (!process.env.KAFKA_SSL) {
   throw new Error("KAFKA_SSL is not set");
 }
 
+if (!process.env.IG_VERIFY_TOKEN) {
+  throw new Error("IG_VERIFY_TOKEN is not set");
+}
+
+if (!process.env.IG_APP_SECRET) {
+  throw new Error("IG_APP_SECRET is not set");
+}
+
 export const config = {
   API_BACKEND_PORT: process.env.API_BACKEND_PORT,
   DATABASE_URL: process.env.DATABASE_URL,
