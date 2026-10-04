@@ -64,7 +64,6 @@ async function isDuplicate(mid: string, event: any): Promise<boolean> {
   }
 }
 
-
 async function releaseDedupe(mid: string) {
   await cacheDel(keys.webhook("instagram", mid)).catch(() => {});
   await prisma.webhookEvent
@@ -95,7 +94,7 @@ async function handleEvent(event: any) {
     if (!userId) return;
 
     const attachment = (message.attachments ?? []).find((a: any) =>
-      ["ig_reel", "share", "video", "image", "ig_post"].includes(a.type)
+      ["ig_reel", "share", "video", "ig_post"].includes(a.type)
     );
 
     if (attachment) {
@@ -135,11 +134,26 @@ async function handleShare(userId: string, senderId: string, attachment: any) {
       select: { id: true },
     });
   } catch (err: any) {
-    if (err?.code === "P2002") return;
-    throw err;
+    if (err?.code !== "P2002") throw err;
+
+    const existing = await prisma.content.findUnique({
+      where: { userId_sourceUrl: { userId, sourceUrl } },
+      select: { id: true, deletedAt: true },
+    });
+    if (!existing || !existing.deletedAt) return;
+
+    content = await prisma.content.update({
+      where: { id: existing.id },
+      data: { deletedAt: null, status: "pending" },
+      select: { id: true },
+    });
   }
 
-  await cacheSet(keys.igLastShare(senderId), content.id, ttl.igLastShare);
+  const redis = await getRedis();
+  if (redis) {
+    const k = keys.igPendingShares(senderId);
+    await redis.multi().sAdd(k, content.id).expire(k, ttl.igPendingShares).exec();
+  }
 
   await publish({
     topic: Topics.CONTENT_INGEST,
@@ -149,8 +163,12 @@ async function handleShare(userId: string, senderId: string, attachment: any) {
 }
 
 async function handleFolderText(userId: string, senderId: string, text: string) {
-  const contentId = await cacheGet<string>(keys.igLastShare(senderId));
-  if (!contentId) return;
+  const redis = await getRedis();
+  if (!redis) return;
+
+  const k = keys.igPendingShares(senderId);
+  const contentIds = await redis.sMembers(k);
+  if (contentIds.length === 0) return;
 
   const name = text.slice(0, 60);
 
@@ -161,15 +179,15 @@ async function handleFolderText(userId: string, senderId: string, text: string) 
     select: { id: true },
   });
 
-  await prisma.contentCollection.upsert({
-    where: {
-      contentId_collectionId: { contentId, collectionId: collection.id },
-    },
-    update: {},
-    create: { contentId, collectionId: collection.id },
+  await prisma.contentCollection.createMany({
+    data: contentIds.map((contentId) => ({
+      contentId,
+      collectionId: collection.id,
+    })),
+    skipDuplicates: true,
   });
 
-  await cacheDel(keys.igLastShare(senderId));
+  await redis.sRem(k, contentIds);
 }
 
 async function handleLinkCode(senderId: string, code: string) {
