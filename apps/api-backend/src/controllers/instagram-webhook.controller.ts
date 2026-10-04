@@ -3,6 +3,7 @@ import { prisma } from "@repo/db-prisma";
 import { keys, ttl, cacheGet, cacheSet, cacheDel, setNX, getRedis } from "@repo/redis";
 import { publish, Topics } from "@repo/kafka";
 import { config } from "../config/config";
+import { sendIgMessage } from "../services/ig-messenger";
 
 
 const LINK_CODE_RE = /^RS-[A-Z0-9]{6}$/;
@@ -152,7 +153,20 @@ async function handleShare(userId: string, senderId: string, attachment: any) {
   const redis = await getRedis();
   if (redis) {
     const k = keys.igPendingShares(senderId);
-    await redis.multi().sAdd(k, content.id).expire(k, ttl.igPendingShares).exec();
+    const [, , count] = (await redis
+      .multi()
+      .sAdd(k, content.id)
+      .expire(k, ttl.igPendingShares)
+      .sCard(k)
+      .exec()) as unknown as number[];
+
+   
+    if (count === 1) {
+      await sendIgMessage(
+        senderId,
+        "Saved ✅ Send more reels if you like, then reply with a folder name (within 60s of the last one).",
+      );
+    }
   }
 
   await publish({
@@ -188,6 +202,8 @@ async function handleFolderText(userId: string, senderId: string, text: string) 
   });
 
   await redis.sRem(k, contentIds);
+
+  await sendIgMessage(senderId, `Added ${contentIds.length} to "${name}" ✅`);
 }
 
 async function handleLinkCode(senderId: string, code: string) {
@@ -195,7 +211,13 @@ async function handleLinkCode(senderId: string, code: string) {
   if (!redis) return;
 
   const userId = await redis.getDel(keys.igLinkCode(code));
-  if (!userId) return;
+  if (!userId) {
+    await sendIgMessage(
+      senderId,
+      "That code didn't work or has expired. Generate a new one in the app.",
+    );
+    return;
+  }
 
   const existing = await prisma.instagramAccount.findUnique({
     where: { igUserId: senderId },
@@ -205,6 +227,12 @@ async function handleLinkCode(senderId: string, code: string) {
   if (existing) {
     if (existing.userId !== userId) {
       console.warn("[ig-link] igUserId already linked to another user");
+      await sendIgMessage(
+        senderId,
+        "This Instagram account is already linked to another account.",
+      );
+    } else {
+      await sendIgMessage(senderId, "Already linked ✅ Send me reels to save.");
     }
     return;
   }
@@ -214,10 +242,17 @@ async function handleLinkCode(senderId: string, code: string) {
       data: { userId, igUserId: senderId },
     });
   } catch (err: any) {
-    if (err?.code === "P2002") return;
+    if (err?.code === "P2002") {
+      await sendIgMessage(
+        senderId,
+        "This Instagram account is already linked.",
+      );
+      return;
+    }
     throw err;
   }
 
   await cacheDel(keys.igSender(senderId));
   console.log("[ig-link] linked", senderId, "->", userId);
+  await sendIgMessage(senderId, "Linked ✅ Send me reels and I'll save them.");
 }

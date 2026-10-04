@@ -45,6 +45,10 @@ if (!process.env.IG_APP_SECRET) {
   throw new Error("IG_APP_SECRET is not set");
 }
 
+if (!process.env.IG_ACCESS_TOKEN) {
+  throw new Error("IG_ACCESS_TOKEN is not set");
+}
+
 export const config = {
   API_BACKEND_PORT: process.env.API_BACKEND_PORT,
   DATABASE_URL: process.env.DATABASE_URL,
@@ -60,5 +64,7 @@ export const config = {
   ig: {
     verifyToken: process.env.IG_VERIFY_TOKEN!,
     appSecret: process.env.IG_APP_SECRET!,
+    accessToken: process.env.IG_ACCESS_TOKEN!,
+     graphBase: process.env.IG_GRAPH_BASE ?? "https://graph.instagram.com/v26.0"
   },
 };

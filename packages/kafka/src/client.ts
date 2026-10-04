@@ -23,9 +23,15 @@ export async function ensureTopics(topics: TopicConfig[]) {
   const admin = kafka.admin();
   await admin.connect();
   try {
+    // Only create topics that are missing. Calling createTopics for topics that
+    // already exist makes kafkajs log a scary "Topic creation errors" ERROR line.
+    const existing = new Set(await admin.listTopics());
+    const missing = topics.filter((t) => !existing.has(t.topic));
+    if (missing.length === 0) return;
+
     await admin.createTopics({
       waitForLeaders: true,
-      topics: topics.map((t) => ({
+      topics: missing.map((t) => ({
         topic: t.topic,
         numPartitions: t.numPartitions ?? 3,
         replicationFactor: 1,
