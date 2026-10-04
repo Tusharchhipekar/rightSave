@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireAuth } from "@repo/auth-guard";
 import { pingController } from "../controllers/ping.controller";
+import ContentRouter from "./content.routes";
+import CollectionsRouter from "./collections.route";
 
 
 // Everything mounted on protectedRouter requires a valid access token.
@@ -10,5 +12,7 @@ const ProtectedRouter: Router = Router();
 
 ProtectedRouter.use(requireAuth);
 ProtectedRouter.get("/ping", pingController);
+ProtectedRouter.use("/content", ContentRouter);
+ProtectedRouter.use("/collections", CollectionsRouter);
 
 export default ProtectedRouter;
