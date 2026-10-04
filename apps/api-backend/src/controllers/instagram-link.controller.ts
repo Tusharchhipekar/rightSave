@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import type { Request, Response } from "express";
-import { getRedis, keys, ttl } from "@repo/redis";
+import { getRedis, keys, ttl, rateLimit } from "@repo/redis";
 import { prisma } from "@repo/db-prisma";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -17,6 +17,16 @@ export const createLinkCode = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized", code: "NO_USER" });
+    }
+
+    const rl = await rateLimit(keys.rateLimit("ig-link-code", userId), 5, 10 * 60);
+       res.setHeader("X-RateLimit-Limit", "5");
+       res.setHeader("X-RateLimit-Remaining", String(rl.remaining));
+     if (!rl.allowed) {
+        res.setHeader("Retry-After", String(rl.retryAfterSeconds));
+          return res
+          .status(429)
+            .json({ message: "Too many requests. Please try again later.", code: "RATE_LIMITED" });
     }
 
     const redis = await getRedis();

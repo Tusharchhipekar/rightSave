@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { prisma } from "@repo/db-prisma";
 import { keys, ttl, cacheGet, cacheSet, cacheDel, setNX, getRedis } from "@repo/redis";
-import { publish, Topics } from "@repo/kafka";
+import { publishIngest } from "../services/content-ingest"
 import { config } from "../config/config";
 import { sendIgMessage } from "../services/ig-messenger";
 
@@ -111,7 +111,6 @@ async function handleEvent(event: any) {
     throw err;
   }
 }
-
 async function handleShare(userId: string, senderId: string, attachment: any) {
   const sourceUrl: string | undefined = attachment?.payload?.url;
   if (!sourceUrl) return;
@@ -121,6 +120,14 @@ async function handleShare(userId: string, senderId: string, attachment: any) {
     attachment.type === "video" ||
     sourceUrl.includes("/reel/");
   const type = isReel ? "reel" : "post";
+
+  const select = {
+    id: true,
+    userId: true,
+    sourceUrl: true,
+    type: true,
+    createdAt: true,
+  } as const;
 
   let content;
   try {
@@ -132,7 +139,7 @@ async function handleShare(userId: string, senderId: string, attachment: any) {
         ingestSource: "instagram_dm",
         status: "pending",
       },
-      select: { id: true },
+      select,
     });
   } catch (err: any) {
     if (err?.code !== "P2002") throw err;
@@ -145,8 +152,8 @@ async function handleShare(userId: string, senderId: string, attachment: any) {
 
     content = await prisma.content.update({
       where: { id: existing.id },
-      data: { deletedAt: null, status: "pending" },
-      select: { id: true },
+      data: { deletedAt: null, status: "pending", createdAt: new Date() },
+      select,
     });
   }
 
@@ -160,7 +167,6 @@ async function handleShare(userId: string, senderId: string, attachment: any) {
       .sCard(k)
       .exec()) as unknown as number[];
 
-   
     if (count === 1) {
       await sendIgMessage(
         senderId,
@@ -169,11 +175,12 @@ async function handleShare(userId: string, senderId: string, attachment: any) {
     }
   }
 
-  await publish({
-    topic: Topics.CONTENT_INGEST,
-    key: content.id,
-    payload: { contentId: content.id, userId, sourceUrl, type },
-  });
+  await publishIngest(content).catch((err) =>
+    console.error(
+      "[ig-webhook] publish failed, sweeper will retry",
+      (err as Error).message,
+    ),
+  );
 }
 
 async function handleFolderText(userId: string, senderId: string, text: string) {

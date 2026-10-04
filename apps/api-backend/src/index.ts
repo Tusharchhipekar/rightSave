@@ -9,11 +9,12 @@ import { notFound, errorHandler } from "./middlewares/error.middleware";
 import { prisma } from "@repo/db-prisma";
 import { getRedis, redisPing, closeRedis } from "@repo/redis";
 import { ensureTopics, ALL_TOPICS, disconnectProducer } from "@repo/kafka";
+import { startIngestSweeper } from "./services/ingest-sweeper";
 
 const app = express();
 // TODO(k8s): app.set("trust proxy", <real hop count>) once deployed behind an ingress.
 app.use(morgan("dev"));
-app.use("/webhooks/instagram",IGWebhookRouter );
+app.use("/webhooks/instagram", IGWebhookRouter);
 app.use(
   express.json({
     verify: (req, _res, buf) => {
@@ -49,7 +50,7 @@ app.get("/readyz", async (_req, res) => {
   } catch {}
 
   // Redis fails open everywhere, so it is reported but does not affect readiness.
-const redis = await withTimeout(redisPing()).catch(() => false);
+  const redis = await withTimeout(redisPing()).catch(() => false);
 
   res
     .status(db ? 200 : 503)
@@ -75,11 +76,14 @@ const start = async () => {
     console.log(`API is running on port ${config.API_BACKEND_PORT}`);
   });
 
+  const sweeper = startIngestSweeper();
+
   let shuttingDown = false;
   const shutdown = async (signal: string) => {
     if (shuttingDown) return;
     shuttingDown = true;
     console.log(`${signal} received, shutting down`);
+    clearInterval(sweeper);
     const force = setTimeout(() => process.exit(1), 10000);
     force.unref();
     server.close(async () => {
