@@ -151,6 +151,7 @@
       "name": "@repo/kafka",
       "version": "1.0.0",
       "dependencies": {
+        "@repo/types": "workspace:*",
         "@types/express": "^5.0.6",
         "dotenv": "^18.0.5",
         "express": "^5.2.1",

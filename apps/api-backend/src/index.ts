@@ -8,8 +8,14 @@ import instagramLinkRoutes from "./routes/instagram-link.routes";
 import { notFound, errorHandler } from "./middlewares/error.middleware";
 import { prisma } from "@repo/db-prisma";
 import { getRedis, redisPing, closeRedis } from "@repo/redis";
-import { ensureTopics, ALL_TOPICS, disconnectProducer } from "@repo/kafka";
+import {
+  ensureTopics,
+  ALL_TOPICS,
+  disconnectProducer,
+  disconnectConsumers,
+} from "@repo/kafka";
 import { startIngestSweeper } from "./services/ingest-sweeper";
+import { startContentProcessedConsumer } from "./services/content-processed-consumer";
 
 const app = express();
 // TODO(k8s): app.set("trust proxy", <real hop count>) once deployed behind an ingress.
@@ -71,6 +77,11 @@ const start = async () => {
   } catch (err) {
     console.error("[kafka] ensureTopics failed:", (err as Error).message);
   }
+  try {
+    await startContentProcessedConsumer();
+  } catch (err) {
+    console.error("[kafka] consumer start failed:", (err as Error).message);
+  }
 
   const server = app.listen(config.API_BACKEND_PORT, () => {
     console.log(`API is running on port ${config.API_BACKEND_PORT}`);
@@ -88,6 +99,7 @@ const start = async () => {
     force.unref();
     server.close(async () => {
       await Promise.allSettled([
+        disconnectConsumers(),
         disconnectProducer(),
         closeRedis(),
         prisma.$disconnect(),
