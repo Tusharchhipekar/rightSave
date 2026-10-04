@@ -64,6 +64,14 @@ async function isDuplicate(mid: string, event: any): Promise<boolean> {
   }
 }
 
+
+async function releaseDedupe(mid: string) {
+  await cacheDel(keys.webhook("instagram", mid)).catch(() => {});
+  await prisma.webhookEvent
+    .deleteMany({ where: { platform: "instagram", externalId: mid } })
+    .catch(() => {});
+}
+
 async function handleEvent(event: any) {
   console.log("[ig]", JSON.stringify(event));
   const senderId: string | undefined = event?.sender?.id;
@@ -74,28 +82,33 @@ async function handleEvent(event: any) {
   if (!mid) return;
   if (await isDuplicate(mid, event)) return;
 
-  const text: string =
-    typeof message.text === "string" ? message.text.trim() : "";
+  try {
+    const text: string =
+      typeof message.text === "string" ? message.text.trim() : "";
 
-  if (text && LINK_CODE_RE.test(text.toUpperCase())) {
-    await handleLinkCode(senderId, text.toUpperCase());
-    return;
-  }
+    if (text && LINK_CODE_RE.test(text.toUpperCase())) {
+      await handleLinkCode(senderId, text.toUpperCase());
+      return;
+    }
 
-  const userId = await resolveUserId(senderId);
-  if (!userId) return;
+    const userId = await resolveUserId(senderId);
+    if (!userId) return;
 
-  const attachment = (message.attachments ?? []).find((a: any) =>
-    ["ig_reel", "share", "video", "image", "ig_post"].includes(a.type)
-  );
+    const attachment = (message.attachments ?? []).find((a: any) =>
+      ["ig_reel", "share", "video", "image", "ig_post"].includes(a.type)
+    );
 
-  if (attachment) {
-    await handleShare(userId, senderId, attachment);
-    return;
-  }
+    if (attachment) {
+      await handleShare(userId, senderId, attachment);
+      return;
+    }
 
-  if (text) {
-    await handleFolderText(userId, senderId, text);
+    if (text) {
+      await handleFolderText(userId, senderId, text);
+    }
+  } catch (err) {
+    await releaseDedupe(mid);
+    throw err;
   }
 }
 

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import type { Request, Response } from "express";
 import { getRedis, keys, ttl } from "@repo/redis";
+import { prisma } from "@repo/db-prisma";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -43,6 +44,32 @@ export const createLinkCode = async (req: Request, res: Response) => {
       .json({ message: "Could not generate code", code: "CODE_GEN_FAILED" });
   } catch (err) {
     console.error("[ig-link] createLinkCode failed", err);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", code: "INTERNAL" });
+  }
+};
+
+
+export const getLinkStatus = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized", code: "NO_USER" });
+    }
+ 
+    const account = await prisma.instagramAccount.findFirst({
+      where: { userId },
+      select: { igUserId: true, username: true, connectedAt: true },
+    });
+ 
+    return res.status(200).json({
+      linked: !!account,
+      username: account?.username ?? null,
+      connectedAt: account?.connectedAt ?? null,
+    });
+  } catch (err) {
+    console.error("[ig-link] getLinkStatus failed", err);
     return res
       .status(500)
       .json({ message: "Internal server error", code: "INTERNAL" });
