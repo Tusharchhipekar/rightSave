@@ -150,7 +150,7 @@ model UserMemory {
   content   String
   source    MemorySource
   isActive  Boolean      @default(true)
-  embedding Unsupported("vector(1536)")?
+  embedding Unsupported("vector(1024)")?
   createdAt DateTime     @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

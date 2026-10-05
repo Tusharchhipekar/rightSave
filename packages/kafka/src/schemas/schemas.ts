@@ -29,7 +29,7 @@ export const ContentProcessedSchema = z.discriminatedUnion("status", [
     ocrText: z.string().nullable(),
     visionCaption: z.string().nullable(),
     tags: z.array(z.string()),
-    embedding: z.array(z.number()).length(1536),
+    embedding: z.array(z.number()).length(1024),
   }),
   z.object({
     ...base,
