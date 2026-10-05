@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     # --- oEmbed (optional; blank = no token) ---
     META_OEMBED_TOKEN: SecretStr | None = None
 
+
+    # --- ImageKit (thumbnail storage) ---
+    IMAGEKIT_PRIVATE_KEY: SecretStr = SecretStr("")
+    IMAGEKIT_URL_ENDPOINT: str = ""
+
     @field_validator("MISTRAL_API_KEY")
     @classmethod
     def _key_not_blank(cls, v: SecretStr) -> SecretStr:

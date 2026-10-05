@@ -9,6 +9,7 @@ from config import settings
 from messaging.consumer import run_consumer
 from messaging.producer import stop_producer
 from pipeline.handler import handle_ingest  # next file: async def handle_ingest(payload: dict) -> None
+from services.embedder import close_embedder
 
 logging.basicConfig(level=settings.LOG_LEVEL, format="%(message)s")
 structlog.configure(
@@ -48,6 +49,7 @@ async def lifespan(app: FastAPI):
         except Exception as err:  # noqa: BLE001
             log.error("worker.consumer_error", error=str(err))
         await stop_producer()
+        await close_embedder()
         log.info("worker.stopped")
 
 

@@ -11,6 +11,7 @@ from services.downloader import download_video
 from services.embedder import embed_text
 from services.oembed import fetch_oembed
 from transcribes.router import transcribe
+from services.thumbnail import store_thumbnail
 
 log = structlog.get_logger()
 
@@ -42,10 +43,11 @@ async def handle_ingest(payload: dict) -> None:
 
     source_url = str(job.sourceUrl)
 
-    meta = await fetch_oembed(source_url)  # caption, creator, hashtags, thumbnail
-    video = await download_video(source_url)  # bytes, in memory only
-    transcript = await transcribe(video)
-    del video  # never keep media bytes
+    dl = await download_video(source_url)  # bytes in memory only
+    oembed = await fetch_oembed(source_url)  # {} until Meta approves
+    meta = {thumbnail_url = await store_thumbnail(cid, meta.get("thumbnail_url"))}
+    transcript = await transcribe(dl.video)
+    del dl  # never keep media bytes
 
     embed_input = " ".join(
         part
@@ -66,7 +68,7 @@ async def handle_ingest(payload: dict) -> None:
         creator_username=meta.get("creator_username"),
         caption=meta.get("caption"),
         hashtags=meta.get("hashtags", []),
-        thumbnail_url=meta.get("thumbnail_url"),
+        thumbnail_url=thumbnail_url,
         transcript=transcript,
     )
     bound.info("pipeline.ready")
