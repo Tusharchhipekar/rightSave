@@ -49,6 +49,14 @@ if (!process.env.IG_ACCESS_TOKEN) {
   throw new Error("IG_ACCESS_TOKEN is not set");
 }
 
+if (!process.env.IG_ACCESS_TOKEN) {
+  throw new Error("IG_ACCESS_TOKEN is not set");
+}
+
+if (!process.env.MISTRAL_API_KEY) {
+  throw new Error("MISTRAL_API_KEY is not set");
+}
+
 export const config = {
   API_BACKEND_PORT: process.env.API_BACKEND_PORT,
   DATABASE_URL: process.env.DATABASE_URL,
@@ -66,5 +74,17 @@ export const config = {
     appSecret: process.env.IG_APP_SECRET!,
     accessToken: process.env.IG_ACCESS_TOKEN!,
      graphBase: process.env.IG_GRAPH_BASE ?? "https://graph.instagram.com/v26.0"
+  },
+
+
+  mistral: {
+    apiKey: process.env.MISTRAL_API_KEY!,
+    chatModel: process.env.MISTRAL_CHAT_MODEL ?? "mistral-small-latest",
+    embedModel: process.env.MISTRAL_EMBED_MODEL ?? "mistral-embed",
+  },
+
+ 
+  tavily: {
+    apiKey: process.env.TAVILY_API_KEY ?? "",
   },
 };

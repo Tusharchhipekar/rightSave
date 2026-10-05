@@ -13,6 +13,13 @@ export const SendMessageApiRequestSchema = z.object({
   content: z.string().min(1).max(8000),
 });
 
+export const ChatApiRequestSchema = z.object({
+  message: z.string().trim().min(1).max(8000),
+  conversationId: id.optional(),
+  contentId: id.optional(),
+  external: z.boolean().default(false),
+});
+
 export const ListConversationsApiSchema = z.object({
   ...pagination,
 });
@@ -24,5 +31,6 @@ export const ListMessagesApiSchema = z.object({
 export type CreateConversationApi = z.infer<typeof CreateConversationApiRequestSchema>;
 export type ConversationParams = z.infer<typeof ConversationParamsSchema>;
 export type SendMessageApi = z.infer<typeof SendMessageApiRequestSchema>;
+export type ChatApi = z.infer<typeof ChatApiRequestSchema>;
 export type ListConversationsApi = z.infer<typeof ListConversationsApiSchema>;
 export type ListMessagesApi = z.infer<typeof ListMessagesApiSchema>;

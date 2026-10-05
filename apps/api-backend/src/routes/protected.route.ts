@@ -3,7 +3,7 @@ import { requireAuth } from "@repo/auth-guard";
 import { pingController } from "../controllers/ping.controller";
 import ContentRouter from "./content.routes";
 import CollectionsRouter from "./collections.route";
-
+import ChatRouter from "./chat.routes";
 
 // Everything mounted on protectedRouter requires a valid access token.
 // TODO: mount content, collections, search, chat routers here.
@@ -14,5 +14,6 @@ ProtectedRouter.use(requireAuth);
 ProtectedRouter.get("/ping", pingController);
 ProtectedRouter.use("/content", ContentRouter);
 ProtectedRouter.use("/collections", CollectionsRouter);
+ProtectedRouter.use("/chat", ChatRouter);
 
 export default ProtectedRouter;
