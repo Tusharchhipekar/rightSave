@@ -19,6 +19,12 @@ export type ChatMessage = {
   content: string;
 };
 
+type ChatOptions = {
+  json?: boolean;
+  maxTokens?: number;
+  temperature?: number;
+};
+
 async function post<T>(
   path: string,
   body: unknown,
@@ -44,7 +50,7 @@ async function post<T>(
   return (await res.json()) as T;
 }
 
-export async function embedQuery(text: string): Promise<number[]> {
+export async function embedText(text: string): Promise<number[]> {
   const data = await post<{ data?: { embedding: number[] }[] }>(
     "/embeddings",
     {
@@ -62,7 +68,10 @@ export async function embedQuery(text: string): Promise<number[]> {
   return emb;
 }
 
-export async function chatComplete(messages: ChatMessage[]): Promise<string> {
+export async function chatComplete(
+  messages: ChatMessage[],
+  opts: ChatOptions = {},
+): Promise<string> {
   const data = await post<{
     choices?: { message?: { content?: string | { text?: string }[] } }[];
   }>(
@@ -70,8 +79,9 @@ export async function chatComplete(messages: ChatMessage[]): Promise<string> {
     {
       model: config.mistral.chatModel,
       messages,
-      temperature: 0.3,
-      max_tokens: 800,
+      temperature: opts.temperature ?? 0.3,
+      max_tokens: opts.maxTokens ?? 800,
+      ...(opts.json ? { response_format: { type: "json_object" } } : {}),
     },
     60_000,
   );
