@@ -34,7 +34,7 @@ class Ready(BaseModel):
     ocrText: str | None = None
     visionCaption: str | None = None
     tags: list[str] = Field(default_factory=list)
-    embedding: list[float] = Field(min_length=1536, max_length=1536)
+    embedding: list[float] = Field(min_length=1024, max_length=1024)
 
 
 class Failed(BaseModel):

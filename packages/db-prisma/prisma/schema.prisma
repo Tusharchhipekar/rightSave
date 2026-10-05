@@ -74,7 +74,7 @@ model Content {
   hashtags        String[]
   tags            String[]
   thumbnailUrl    String?
-  embedding       Unsupported("vector(1536)")?
+  embedding       Unsupported("vector(1024)")?
   duplicateOfId   String?
   deletedAt       DateTime?
   createdAt       DateTime     @default(now())
