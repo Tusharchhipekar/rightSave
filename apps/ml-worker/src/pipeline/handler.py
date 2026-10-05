@@ -10,8 +10,8 @@ from schemas.schemas import ContentIngest
 from services.downloader import download_video
 from services.embedder import embed_text
 from services.oembed import fetch_oembed
-from transcribes.router import transcribe
 from services.thumbnail import store_thumbnail
+from transcribes.router import transcribe
 
 log = structlog.get_logger()
 
@@ -28,7 +28,6 @@ async def handle_ingest(payload: dict) -> None:
     bound = log.bind(content_id=cid, user_id=uid, type=job.type)
 
     if job.type not in SUPPORTED_TYPES:
-        await publish_failed(cid, uid, error=f"unsupported type: {job.type}", retryable=False)
         raise NonRetryableError(f"unsupported type: {job.type}")
 
     age = (datetime.now(timezone.utc) - job.receivedAt).total_seconds()
@@ -45,7 +44,8 @@ async def handle_ingest(payload: dict) -> None:
 
     dl = await download_video(source_url)  # bytes in memory only
     oembed = await fetch_oembed(source_url)  # {} until Meta approves
-    meta = {thumbnail_url = await store_thumbnail(cid, meta.get("thumbnail_url"))}
+    meta = {**dl.meta, **{k: v for k, v in oembed.items() if v}}
+    thumbnail_url = await store_thumbnail(cid, meta.get("thumbnail_url"))
     transcript = await transcribe(dl.video)
     del dl  # never keep media bytes
 
@@ -72,3 +72,18 @@ async def handle_ingest(payload: dict) -> None:
         transcript=transcript,
     )
     bound.info("pipeline.ready")
+
+
+async def handle_dead_letter(payload: dict | None, error: Exception) -> None:
+    """Called after a job is dead-lettered so the Content row doesn't stay 'processing'."""
+    if not payload:
+        return
+    cid, uid = payload.get("contentId"), payload.get("userId")
+    if not cid or not uid:
+        return
+    await publish_failed(
+        cid,
+        uid,
+        error=str(error) or type(error).__name__,
+        retryable=not isinstance(error, NonRetryableError),
+    )

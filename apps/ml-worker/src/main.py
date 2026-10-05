@@ -8,7 +8,7 @@ from fastapi import FastAPI, Response
 from config import settings
 from messaging.consumer import run_consumer
 from messaging.producer import stop_producer
-from pipeline.handler import handle_ingest  # next file: async def handle_ingest(payload: dict) -> None
+from pipeline.handler import handle_dead_letter, handle_ingest
 from services.embedder import close_embedder
 
 logging.basicConfig(level=settings.LOG_LEVEL, format="%(message)s")
@@ -29,7 +29,12 @@ log = structlog.get_logger()
 async def lifespan(app: FastAPI):
     stop = asyncio.Event()
     task = asyncio.create_task(
-        run_consumer(settings.TOPIC_INGEST, handle_ingest, stop),
+        run_consumer(
+            settings.TOPIC_INGEST,
+            handle_ingest,
+            stop,
+            on_dead_letter=handle_dead_letter,
+        ),
         name="ingest-consumer",
     )
     app.state.stop = stop

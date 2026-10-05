@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     MAX_AUDIO_SECONDS: int = 600
 
     # --- Whisper (local, English) ---
-    WHISPER_MODEL: str = "small"
+    WHISPER_MODEL: str = "base"
     WHISPER_COMPUTE_TYPE: str = "int8"
     WHISPER_ENGLISH_MIN_PROB: float = 0.9
 

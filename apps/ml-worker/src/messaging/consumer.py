@@ -13,6 +13,7 @@ from messaging.producer import publish_dlq
 log = structlog.get_logger()
 
 Handler = Callable[[dict[str, Any]], Awaitable[None]]
+DeadLetterHook = Callable[[dict[str, Any] | None, Exception], Awaitable[None]]
 
 
 class NonRetryableError(Exception):
@@ -24,6 +25,7 @@ async def run_consumer(
     handler: Handler,
     stop: asyncio.Event,
     group_id: str | None = None,
+    on_dead_letter: DeadLetterHook | None = None,
 ) -> None:
     """
     Consume `topic` until `stop` is set. One message at a time, offset committed
@@ -47,14 +49,19 @@ async def run_consumer(
             batch = await consumer.getmany(timeout_ms=1000, max_records=1)
             for messages in batch.values():
                 for msg in messages:
-                    await _process(topic, handler, msg)
+                    await _process(topic, handler, msg, on_dead_letter)
                     await consumer.commit()
     finally:
         await consumer.stop()
         log.info("consumer.stopped", topic=topic)
 
 
-async def _process(topic: str, handler: Handler, msg: Any) -> None:
+async def _process(
+    topic: str,
+    handler: Handler,
+    msg: Any,
+    on_dead_letter: DeadLetterHook | None,
+) -> None:
     key = msg.key.decode("utf-8") if msg.key else None
     raw = msg.value.decode("utf-8") if msg.value else ""
 
@@ -78,3 +85,14 @@ async def _process(topic: str, handler: Handler, msg: Any) -> None:
 
     log.error("consumer.dead_letter", key=key, error=str(last_error))
     await publish_dlq(topic, key, raw, str(last_error))
+
+    if on_dead_letter is not None and last_error is not None:
+        try:
+            parsed = json.loads(raw)
+            payload_dict = parsed if isinstance(parsed, dict) else None
+        except json.JSONDecodeError:
+            payload_dict = None
+        try:
+            await on_dead_letter(payload_dict, last_error)
+        except Exception as err:  # noqa: BLE001
+            log.error("consumer.dead_letter_hook_failed", key=key, error=str(err))
