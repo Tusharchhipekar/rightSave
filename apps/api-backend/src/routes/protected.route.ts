@@ -5,11 +5,8 @@ import ContentRouter from "./content.routes";
 import CollectionsRouter from "./collections.route";
 import ChatRouter from "./chat.routes";
 import MemoryRouter from "./memory.routes";
+import SearchRouter from "./search.routes";
 
-
-// Everything mounted on protectedRouter requires a valid access token.
-// TODO: mount content, collections, search, chat routers here.
-// The Instagram webhook is public (signature-verified) and must NOT be mounted here.
 const ProtectedRouter: Router = Router();
 
 ProtectedRouter.use(requireAuth);
@@ -18,6 +15,7 @@ ProtectedRouter.use("/content", ContentRouter);
 ProtectedRouter.use("/collections", CollectionsRouter);
 ProtectedRouter.use("/chat", ChatRouter);
 ProtectedRouter.use("/memories", MemoryRouter);
+ProtectedRouter.use("/search", SearchRouter);
 
 
 export default ProtectedRouter;

@@ -11,7 +11,8 @@
     "test:ig": "bun run ./src/test/ig-flow.ts",
     "test:e2e": "bun run ./src/test/e2e-ingest.ts",
     "test:e2e:chat": "CHAT=1 bun run ./src/test/e2e-ingest.ts",
-    "test:e2e:bad": "BAD=1 bun run ./src/test/e2e-ingest.ts"
+    "test:e2e:bad": "BAD=1 bun run ./src/test/e2e-ingest.ts",
+    "test:search": "bun run ./src/test/search.ts"
 
   },
   "devDependencies": {
