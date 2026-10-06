@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { common } from "@repo/types";
 
+// ---------- API backend <-> ML worker ----------
+
 export const ContentIngestSchema = z.object({
   contentId: z.string(),
   userId: z.string(),
@@ -39,3 +41,25 @@ export const ContentProcessedSchema = z.discriminatedUnion("status", [
   }),
 ]);
 export type ContentProcessedPayload = z.infer<typeof ContentProcessedSchema>;
+
+// ---------- Auth service -> Notification service ----------
+
+const authBase = {
+  userId: z.string(),
+  email: z.string().email(),
+  occurredAt: z.string().datetime(),
+};
+
+export const AuthEventSchema = z.discriminatedUnion("type", [
+  z.object({
+    ...authBase,
+    type: z.literal("login"),
+    ip: z.string().nullable(),
+    userAgent: z.string().nullable(),
+  }),
+  z.object({
+    ...authBase,
+    type: z.literal("password_changed"),
+  }),
+]);
+export type AuthEventPayload = z.infer<typeof AuthEventSchema>;

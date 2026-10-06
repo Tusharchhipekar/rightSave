@@ -3,8 +3,10 @@ import type { ZodType } from "zod";
 export type Topic =
   | "content-ingest"
   | "content-processed"
+  | "auth-events"
   | "content-ingest.dlq"
-  | "content-processed.dlq";
+  | "content-processed.dlq"
+  | "auth-events.dlq";
 
 export type TopicConfig = {
   topic: string;
