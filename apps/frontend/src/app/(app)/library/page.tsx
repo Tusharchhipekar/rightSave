@@ -1,22 +1,18 @@
-"use client";
-
-import { useAuthStore } from "@/features/auth/store";
-import { useLogout } from "@/features/auth/hooks/useAuth";
-import { Button } from "@/shared/components/Button";
+import Link from "next/link";
 
 export default function LibraryPage() {
-  const user = useAuthStore((s) => s.user);
-  const logout = useLogout();
-
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-8">
-      <h1 className="text-xl font-semibold">Library</h1>
-      <p className="text-neutral-400">
-        Signed in as {user?.username}. Placeholder until the library batch.
-      </p>
-      <Button variant="ghost" onClick={() => logout.mutate()}>
-        Log out
-      </Button>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface px-4 text-on-surface">
+      <h1 className="font-headline-lg text-headline-lg">Library</h1>
+      <p className="text-on-surface-variant">Your saved reels will appear here.</p>
+      <div className="flex gap-4 text-sm">
+        <Link href="/" className="underline underline-offset-4">
+          Home
+        </Link>
+        <Link href="/logout" className="underline underline-offset-4">
+          Log out
+        </Link>
+      </div>
     </main>
   );
 }

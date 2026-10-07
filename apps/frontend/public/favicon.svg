@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="20" fill="#8083FF" fill-opacity="0.25"/>
+  <rect x="1" y="1" width="62" height="62" rx="19" stroke="#8083FF" stroke-opacity="0.4" stroke-width="2"/>
+  <!-- Laptop Body -->
+  <rect x="14" y="16" width="36" height="24" rx="4" stroke="#C0C1FF" stroke-width="3" fill="none"/>
+  <line x1="10" y1="46" x2="54" y2="46" stroke="#C0C1FF" stroke-width="4" stroke-linecap="round"/>
+  <!-- Checkmark -->
+  <path d="M25 28L31 34L40 23" stroke="#C0C1FF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

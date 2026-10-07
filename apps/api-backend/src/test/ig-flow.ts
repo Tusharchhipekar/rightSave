@@ -63,10 +63,13 @@ const waitFor = async (fn: () => Promise<boolean>, timeoutMs = 8000) => {
 type SentDm = { to: string; text: string; auth: string | null };
 const sent: SentDm[] = [];
 
+declare const Bun: any;
+
 const startFakeMeta = () =>
   Bun.serve({
     port: FAKE_META_PORT,
-    async fetch(req) {
+    async fetch(req: Request) {
+
       const body: any = await req.json().catch(() => ({}));
       sent.push({
         to: body?.recipient?.id,

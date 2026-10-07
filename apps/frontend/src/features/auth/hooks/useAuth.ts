@@ -62,7 +62,7 @@ export function useLogout() {
     onSettled: () => {
       useAuthStore.getState().clear();
       queryClient.clear();
-      router.replace("/login");
+      router.replace("/");
     },
   });
 }
