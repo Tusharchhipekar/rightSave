@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     IMAGEKIT_PRIVATE_KEY: SecretStr = SecretStr("")
     IMAGEKIT_URL_ENDPOINT: str = ""
 
+    # --- Read-only Postgres (agent tools) ---
+    DATABASE_URL_READONLY: SecretStr = SecretStr("")
+    DB_POOL_MAX: int = 5
+
     @field_validator("MISTRAL_API_KEY")
     @classmethod
     def _key_not_blank(cls, v: SecretStr) -> SecretStr:

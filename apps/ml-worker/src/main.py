@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from db.pool import close_pool, init_pool
 
 import structlog
 from fastapi import FastAPI, Response
@@ -63,13 +64,11 @@ app = FastAPI(title="rightsave ml-worker", lifespan=lifespan)
 
 @app.get("/healthz")
 async def healthz() -> dict[str, str]:
-    # liveness: the process is up
     return {"status": "ok"}
 
 
 @app.get("/readyz")
 async def readyz(response: Response) -> dict[str, str]:
-    # readiness: the consumer loop is still running
     task: asyncio.Task | None = getattr(app.state, "consumer_task", None)
     if task is None or task.done():
         response.status_code = 503
