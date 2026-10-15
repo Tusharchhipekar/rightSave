@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from db.pool import close_pool, init_pool
-from db.queries import get_content, search_content, search_memories
+from db.queries import get_content, search_content
 from services.embedder import close_embedder, embed_text
 
 USER_ID = "38e60c3d-eca9-4d16-9437-a64a4a8bae0b"
@@ -24,9 +24,6 @@ async def main() -> None:
 
     other = await get_content("not-the-owner", CONTENT_ID)
     print("get_content wrong user (expect None):", other)
-
-    mems = await search_memories(USER_ID, emb, limit=3)
-    print("search_memories:", len(mems))
 
     await close_pool()
     await close_embedder()

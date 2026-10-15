@@ -53,9 +53,6 @@ if (!process.env.IG_ACCESS_TOKEN) {
   throw new Error("IG_ACCESS_TOKEN is not set");
 }
 
-if (!process.env.MISTRAL_API_KEY) {
-  throw new Error("MISTRAL_API_KEY is not set");
-}
 
 export const config = {
   API_BACKEND_PORT: process.env.API_BACKEND_PORT,
@@ -84,7 +81,5 @@ export const config = {
   },
 
  
-  tavily: {
-    apiKey: process.env.TAVILY_API_KEY ?? "",
-  },
+
 };

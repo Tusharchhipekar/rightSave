@@ -21,6 +21,7 @@ const listSelect = {
 
 const detailSelect = {
   ...listSelect,
+  summary: true,
   transcript: true,
   ocrText: true,
   visionCaption: true,

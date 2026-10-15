@@ -69,6 +69,7 @@ async def get_content(user_id: str, content_id: str) -> dict[str, Any] | None:
                c."type"::text        AS type,
                c."creatorUsername"   AS creator,
                c.caption,
+               c.summary,
                c.transcript,
                c."ocrText"           AS ocr_text,
                c."visionCaption"     AS vision_caption,
@@ -85,39 +86,3 @@ async def get_content(user_id: str, content_id: str) -> dict[str, Any] | None:
     async with get_pool().connection() as conn:
         cur = await conn.execute(sql, [content_id, user_id])
         return await cur.fetchone()
-
-
-async def search_memories(
-    user_id: str,
-    embedding: list[float],
-    limit: int = 5,
-    memory_type: str | None = None, 
-) -> list[dict[str, Any]]:
-    """Top-k active long-term memories for this user by cosine similarity."""
-    vec = _vec(embedding)
-    params: list[Any] = [vec, user_id]
-
-    type_sql = ""
-    if memory_type:
-        type_sql = "AND m.type::text = %s"
-        params.append(memory_type)
-
-    params += [vec, limit]
-
-    sql = f"""
-        SELECT m.id,
-               m.content,
-               m.source::text   AS source,
-               m."createdAt"    AS created_at,
-               1 - (m.embedding <=> %s) AS similarity
-        FROM "UserMemory" m
-        WHERE m."userId" = %s
-          AND m."isActive" = true
-          AND m.embedding IS NOT NULL
-          {type_sql}
-        ORDER BY m.embedding <=> %s
-        LIMIT %s
-    """
-    async with get_pool().connection() as conn:
-        cur = await conn.execute(sql, params)
-        return await cur.fetchall()

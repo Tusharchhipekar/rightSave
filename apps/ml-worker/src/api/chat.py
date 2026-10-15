@@ -2,12 +2,13 @@ import hmac
 from typing import Any, Literal
 
 import structlog
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from agent.context import ToolContext
-from agent.runner import run_agent
+from agent.runner import FALLBACK_ANSWER, run_agent
 from config import settings
+from services import memory
 
 log = structlog.get_logger()
 
@@ -28,7 +29,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    sources: dict[str, list[dict[str, Any]]]
+    sources: list[dict[str, Any]]
     toolsUsed: list[str]
     limitHit: bool
 
@@ -42,9 +43,25 @@ def _check_secret(provided: str | None) -> None:
         raise HTTPException(status_code=401, detail="unauthorized")
 
 
+def _flatten_sources(sources: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Agent sources -> the flat list the api-backend schema expects."""
+    out: list[dict[str, Any]] = []
+    for s in sources.get("saved", []):
+        if s.get("id"):
+            out.append({"type": "saved", "contentId": s["id"]})
+    for w in sources.get("web", []):
+        if w.get("url"):
+            item: dict[str, Any] = {"type": "web", "url": w["url"]}
+            if w.get("title"):
+                item["title"] = w["title"]
+            out.append(item)
+    return out
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     body: ChatRequest,
+    background: BackgroundTasks,
     x_internal_secret: str | None = Header(default=None),
 ) -> ChatResponse:
     _check_secret(x_internal_secret)
@@ -58,10 +75,13 @@ async def chat(
         log.error("chat.failed", error=repr(err), exc_info=True)
         detail = f"agent failed: {err!r}" if settings.EXPOSE_ERRORS else "agent failed"
         raise HTTPException(status_code=502, detail=detail) from err
-        
+
+    if result.answer != FALLBACK_ANSWER:
+        background.add_task(memory.add, body.userId, body.message, result.answer)
+
     return ChatResponse(
         answer=result.answer,
-        sources=result.sources,
+        sources=_flatten_sources(result.sources),
         toolsUsed=result.tools_used,
         limitHit=result.limit_hit,
     )

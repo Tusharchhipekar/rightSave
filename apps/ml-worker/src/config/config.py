@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     # --- Internal API (api-backend -> ml-worker) ---
     INTERNAL_SECRET: SecretStr = SecretStr("")
 
+
+        # --- mem0 (hosted long-term memory) ---
+    MEM0_API_KEY: SecretStr = SecretStr("")
+
     # --- Tavily (web_search tool) ---
     TAVILY_API_KEY: SecretStr = SecretStr("")
 

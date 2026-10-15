@@ -6,7 +6,7 @@ import {
   
   const ML_WORKER_URL = process.env.ML_WORKER_URL ?? "http://localhost:8000";
   const INTERNAL_SECRET = process.env.INTERNAL_SECRET ?? "";
-  const TIMEOUT_MS = 35_000;
+  const TIMEOUT_MS = 50_000;
   
   export async function callMlChat(payload: MlChatRequest): Promise<MlChatResponse> {
     const res = await fetch(`${ML_WORKER_URL}/chat`, {

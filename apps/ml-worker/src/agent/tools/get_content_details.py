@@ -10,11 +10,13 @@ SPEC: dict[str, Any] = {
     "function": {
         "name": "get_content_details",
         "description": (
-            "Get the full details of ONE saved item: full transcript, caption, creator, "
-            "hashtags and link. Use it after search_saved_content when the snippet is not "
-            "enough to answer, or when the user asks something specific about one saved "
-            "reel or post. If the user is chatting about one specific reel, you can omit "
-            "content_id."
+            "Get the full details of ONE saved item: a short summary (key points, steps "
+            "and recommendations), the full transcript, caption, creator, hashtags and "
+            "link. Use the summary for overview questions and the transcript when you "
+            "need exact wording or details the summary leaves out. Use it after "
+            "search_saved_content when the snippet is not enough to answer, or when the "
+            "user asks something specific about one saved reel or post. If the user is "
+            "chatting about one specific reel, you can omit content_id."
         ),
         "parameters": {
             "type": "object",
@@ -45,11 +47,13 @@ async def run(ctx: ToolContext, args: dict[str, Any]) -> dict[str, Any]:
     if truncated:
         transcript = transcript[:MAX_TRANSCRIPT_CHARS]
 
+    # summary comes first so the model reads the key points before the long transcript
     return {
         "id": row["id"],
         "type": row["type"],
         "creator": row["creator"],
         "caption": row["caption"],
+        "summary": row.get("summary"),
         "transcript": transcript,
         "transcript_truncated": truncated,
         "ocr_text": row["ocr_text"],
