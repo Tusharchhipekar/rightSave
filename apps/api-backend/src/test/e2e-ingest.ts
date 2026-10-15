@@ -19,7 +19,7 @@ const AUTH_TOKEN = process.env.AUTH_TOKEN;
 const JWT_SECRET = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET;
 
 const sourceUrl = BAD
-  ? "https://www.instagram.com/reel/DOESNOTEXIST000/"
+  ? "https://www.instagram.com/reel/DX4vcECNFwG/?xtok=MTlzanBzc202cDRsZg=="
   : REEL_URL;
 const INGEST_TIMEOUT_MS = 180_000;
 const MEMORY_TIMEOUT_MS = 30_000;

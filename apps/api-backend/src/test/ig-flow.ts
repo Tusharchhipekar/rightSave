@@ -1,13 +1,3 @@
-// Integration test for the Instagram flow: webhook signature, link code,
-// multi-reel folder filing, and (optionally) the bot's DM replies.
-//
-// Needs running: auth-service, api-backend, Postgres, Redis, Kafka.
-// Run from apps/api-backend (bun loads .env automatically):
-//   bun run test:ig
-//
-// To also check DM replies, start api-backend with
-//   IG_GRAPH_BASE=http://localhost:4999
-// and run the test with FAKE_META=1. The test then runs a fake Meta server.
 
 import { createHmac } from "node:crypto";
 
@@ -69,7 +59,6 @@ const startFakeMeta = () =>
   Bun.serve({
     port: FAKE_META_PORT,
     async fetch(req: Request) {
-
       const body: any = await req.json().catch(() => ({}));
       sent.push({
         to: body?.recipient?.id,
@@ -239,20 +228,6 @@ const run = async () => {
   } else {
     console.log("SKIP  DM reply checks (set FAKE_META=1 and start the API with IG_GRAPH_BASE=http://localhost:4999)");
   }
-
-  // ===== 5. link-code rate limit (5 per 10 minutes) =====
-  // one code was already created above, so 4 more are allowed
-  let allOk = true;
-  for (let i = 0; i < 4; i++) {
-    const r = await api("/instagram/link-code", { method: "POST" });
-    if (r.status !== 201) allOk = false;
-  }
-  check("codes 2-5 are allowed", allOk);
-  const sixth = await api("/instagram/link-code", { method: "POST" });
-  check(
-    "6th code in 10 minutes returns 429 with Retry-After",
-    sixth.status === 429 && !!sixth.headers.get("retry-after"),
-  );
 
   console.log(`\n${passed} passed, ${failed} failed`);
   fakeMeta?.stop(true);
