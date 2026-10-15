@@ -7,5 +7,6 @@ import * as memory from "./memory";
 import * as webhook from "./webhook";
 import * as common from "./common";
 import * as content from "./content";
+import * as chat from "./chat";
 
-export { auth, user, instagram, collection, conversation, memory, webhook, common, content };
+export { auth, user, instagram, collection, conversation, memory, webhook, common, content , chat};

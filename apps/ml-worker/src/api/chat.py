@@ -36,7 +36,7 @@ class ChatResponse(BaseModel):
 def _check_secret(provided: str | None) -> None:
     expected = settings.INTERNAL_SECRET.get_secret_value()
     if not expected:
-        # fail closed: never serve /chat without a configured secret
+      
         raise HTTPException(status_code=503, detail="chat not configured")
     if not provided or not hmac.compare_digest(provided, expected):
         raise HTTPException(status_code=401, detail="unauthorized")
@@ -56,8 +56,9 @@ async def chat(
         result = await run_agent(ctx, body.message, history)
     except Exception as err:  # noqa: BLE001
         log.error("chat.failed", error=repr(err), exc_info=True)
-        raise HTTPException(status_code=502, detail="agent failed") from err
-
+        detail = f"agent failed: {err!r}" if settings.EXPOSE_ERRORS else "agent failed"
+        raise HTTPException(status_code=502, detail=detail) from err
+        
     return ChatResponse(
         answer=result.answer,
         sources=result.sources,

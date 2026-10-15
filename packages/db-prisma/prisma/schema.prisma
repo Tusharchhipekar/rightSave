@@ -121,7 +121,6 @@ model Conversation {
   id              String    @id @default(uuid())
   userId          String
   title           String?
-  summary         String?
   lastMessageText String?
   lastMessageAt   DateTime?
   createdAt       DateTime  @default(now())
@@ -137,6 +136,8 @@ model Message {
   conversationId String
   role           MessageRole
   content        String
+  sources        Json?
+  toolsUsed      Json?
   createdAt      DateTime    @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -149,15 +150,15 @@ model UserMemory {
   userId    String
   content   String
   source    MemorySource
+  type      MemoryType   @default(factual)
   isActive  Boolean      @default(true)
   embedding Unsupported("vector(1024)")?
   createdAt DateTime     @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, isActive])
+  @@index([userId, isActive, type])
 }
-
 model WebhookEvent {
   id          String    @id @default(uuid())
   platform    String
@@ -169,6 +170,12 @@ model WebhookEvent {
   @@unique([platform, externalId])
 }
 
+
+enum MemoryType {
+  factual
+  semantic
+  episodic
+}
 
 
 

@@ -76,6 +76,8 @@ class Settings(BaseSettings):
     CHAT_MODEL: str = ""                 
     OPENAI_API_KEY: SecretStr = SecretStr("")
 
+    EXPOSE_ERRORS: bool = False
+
     @field_validator("MISTRAL_API_KEY")
     @classmethod
     def _key_not_blank(cls, v: SecretStr) -> SecretStr:
