@@ -8,8 +8,8 @@ from db.pool import close_pool, init_pool
 from db.queries import get_content, search_content, search_memories
 from services.embedder import close_embedder, embed_text
 
-USER_ID = "PUT_A_REAL_USER_ID"
-CONTENT_ID = "PUT_A_REAL_CONTENT_ID"
+USER_ID = "38e60c3d-eca9-4d16-9437-a64a4a8bae0b"
+CONTENT_ID = "39523afe-ee86-4f5e-8136-6bb37b960e46"
 
 
 async def main() -> None:

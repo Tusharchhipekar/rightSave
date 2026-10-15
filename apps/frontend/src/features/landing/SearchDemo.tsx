@@ -15,30 +15,28 @@ export default function SearchDemo() {
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Switch prompt chip and reset typewriter state
   const handleSelectPrompt = (key: DemoKey) => {
     setActive(key);
     setDisplayText("");
     setIsDeleting(false);
   };
 
-  // Smooth typewriter & backspace loop effect at a steady, minimal pace
   useEffect(() => {
     const typingSpeed = isDeleting ? 40 : 75;
     let timeout: NodeJS.Timeout;
 
     if (!isDeleting && displayText === fullText) {
-      // Pause at full sentence before erasing
+      
       timeout = setTimeout(() => {
         setIsDeleting(true);
       }, 2000);
     } else if (isDeleting && displayText === "") {
-      // Pause when completely cleared before typing again
+      
       timeout = setTimeout(() => {
         setIsDeleting(false);
       }, 600);
     } else {
-      // Type or erase character by character
+     
       timeout = setTimeout(() => {
         setDisplayText((prev) =>
           isDeleting

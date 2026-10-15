@@ -4,7 +4,6 @@ type IconProps = {
     filled?: boolean;
   };
   
-  // Material Symbols Outlined (font is loaded in app/layout.tsx)
   export default function Icon({ name, className = "", filled = false }: IconProps) {
     return (
       <span

@@ -7,7 +7,7 @@ export type DemoReel = {
   duration: string;
   saved: string;
   summary: string;
-  image?: string; // optional thumbnail; a placeholder tile is shown when missing
+  image?: string; 
 };
 
 export type DemoSet = {

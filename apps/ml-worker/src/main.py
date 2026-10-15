@@ -2,6 +2,9 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from db.pool import close_pool, init_pool
+from agent.tools.web_search import close_web_search 
+from agent.llm import close_llm 
+from api.chat import router as chat_router
 
 import structlog
 from fastapi import FastAPI, Response
@@ -29,6 +32,7 @@ log = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     stop = asyncio.Event()
+    await init_pool()
     task = asyncio.create_task(
         run_consumer(
             settings.TOPIC_INGEST,
@@ -52,14 +56,18 @@ async def lifespan(app: FastAPI):
         except asyncio.TimeoutError:
             log.warning("worker.consumer_stop_timeout")
             task.cancel()
-        except Exception as err:  # noqa: BLE001
+        except Exception as err: 
             log.error("worker.consumer_error", error=str(err))
         await stop_producer()
         await close_embedder()
+        await close_web_search()
+        await close_llm()
+        await close_pool()
         log.info("worker.stopped")
 
 
 app = FastAPI(title="rightsave ml-worker", lifespan=lifespan)
+app.include_router(chat_router)
 
 
 @app.get("/healthz")

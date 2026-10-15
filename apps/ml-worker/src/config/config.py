@@ -65,6 +65,17 @@ class Settings(BaseSettings):
     DATABASE_URL_READONLY: SecretStr = SecretStr("")
     DB_POOL_MAX: int = 5
 
+
+    # --- Internal API (api-backend -> ml-worker) ---
+    INTERNAL_SECRET: SecretStr = SecretStr("")
+
+    # --- Tavily (web_search tool) ---
+    TAVILY_API_KEY: SecretStr = SecretStr("")
+
+    LLM_PROVIDER: str = "mistral"       
+    CHAT_MODEL: str = ""                 
+    OPENAI_API_KEY: SecretStr = SecretStr("")
+
     @field_validator("MISTRAL_API_KEY")
     @classmethod
     def _key_not_blank(cls, v: SecretStr) -> SecretStr:
