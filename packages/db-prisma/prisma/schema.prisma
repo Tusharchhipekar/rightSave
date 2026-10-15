@@ -12,7 +12,6 @@ datasource db {
   provider = "postgresql"
 }
 
-
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
@@ -27,7 +26,6 @@ model User {
   contents          Content[]
   collections       Collection[]
   conversations     Conversation[]
-  memories          UserMemory[]
 }
 
 model Account {
@@ -60,7 +58,7 @@ model InstagramAccount {
 }
 
 model Content {
-  id              String       @id @default(uuid())
+  id              String        @id @default(uuid())
   userId          String
   type            ContentType
   mediaType       MediaType?
@@ -69,6 +67,7 @@ model Content {
   creatorUsername String?
   caption         String?
   transcript      String?
+  summary         String?
   ocrText         String?
   visionCaption   String?
   hashtags        String[]
@@ -77,20 +76,19 @@ model Content {
   embedding       Unsupported("vector(1024)")?
   duplicateOfId   String?
   deletedAt       DateTime?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   status          ContentStatus @default(pending)
 
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  duplicateOf  Content?            @relation("Duplicates", fields: [duplicateOfId], references: [id])
-  duplicates   Content[]           @relation("Duplicates")
-  collections  ContentCollection[]
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duplicateOf Content?            @relation("Duplicates", fields: [duplicateOfId], references: [id])
+  duplicates  Content[]           @relation("Duplicates")
+  collections ContentCollection[]
 
   @@unique([userId, sourceUrl])
   @@index([userId, createdAt])
   @@index([userId, ingestSource])
   @@index([userId, status])
-
 }
 
 model Collection {
@@ -145,20 +143,6 @@ model Message {
   @@index([conversationId, createdAt])
 }
 
-model UserMemory {
-  id        String       @id @default(uuid())
-  userId    String
-  content   String
-  source    MemorySource
-  type      MemoryType   @default(factual)
-  isActive  Boolean      @default(true)
-  embedding Unsupported("vector(1024)")?
-  createdAt DateTime     @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isActive, type])
-}
 model WebhookEvent {
   id          String    @id @default(uuid())
   platform    String
@@ -169,15 +153,6 @@ model WebhookEvent {
 
   @@unique([platform, externalId])
 }
-
-
-enum MemoryType {
-  factual
-  semantic
-  episodic
-}
-
-
 
 enum AuthProvider {
   credentials
@@ -212,12 +187,6 @@ enum MessageRole {
   assistant
   system
 }
-
-enum MemorySource {
-  inferred
-  explicit
-}
-
 
 enum ContentStatus {
   pending

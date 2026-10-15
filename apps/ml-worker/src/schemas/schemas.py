@@ -31,6 +31,7 @@ class Ready(BaseModel):
     hashtags: list[str] = Field(default_factory=list)
     thumbnailUrl: HttpUrl | None = None
     transcript: str | None = None
+    summary: str | None = None
     ocrText: str | None = None
     visionCaption: str | None = None
     tags: list[str] = Field(default_factory=list)

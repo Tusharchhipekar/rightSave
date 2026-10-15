@@ -5,10 +5,9 @@ import { disconnectProducer } from "@repo/kafka";
 
 // ---- config (env) ----
 const REEL_URL =
-  process.env.REEL_URL ?? "https://www.instagram.com/reel/DeBRZNxNjRc/";
+  process.env.REEL_URL ?? "https://www.instagram.com/reel/DX4vcECNFwG/?xtok=MTlzanBzc202cDRsZg==";
 const BAD = process.env.BAD === "1"; // bad URL -> expect dead-letter -> failed
-const CHAT = process.env.CHAT === "1"; // enable chat + memory sections
-const EXTERNAL = process.env.EXTERNAL === "1"; // also test Tavily "external" chat
+const CHAT = process.env.CHAT === "1"; // enable chat section
 const KEEP = process.env.KEEP === "1"; // keep rows for psql inspection
 const API_URL = process.env.API_URL ?? "http://localhost:4002";
 const CHAT_PATH = process.env.CHAT_PATH ?? "/api/v1/chat"; // ASSUMPTION
@@ -19,12 +18,10 @@ const AUTH_TOKEN = process.env.AUTH_TOKEN;
 const JWT_SECRET = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET;
 
 const sourceUrl = BAD
-  ? "https://www.instagram.com/reel/DX4vcECNFwG/?xtok=MTlzanBzc202cDRsZg=="
+  ? "https://www.instagram.com/reel/DOESNOTEXIST000/"
   : REEL_URL;
 const INGEST_TIMEOUT_MS = 180_000;
-const MEMORY_TIMEOUT_MS = 30_000;
 const suffix = Date.now();
-const runStart = new Date();
 
 // ---- helpers ----
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -69,12 +66,12 @@ function tokenFor(userId: string): string {
 
 type ChatRes = { ok: boolean; status: number; json: any; text: string };
 
-// ASSUMPTION: POST { conversationId, message, external } -> JSON with reply/answer
+// ASSUMPTION: POST { conversationId, message, contentId? } -> JSON with reply/answer
 async function chat(
   token: string,
   conversationId: string,
   message: string,
-  external = false,
+  contentId?: string,
 ): Promise<ChatRes> {
   const res = await fetch(`${API_URL}${CHAT_PATH}`, {
     method: "POST",
@@ -82,7 +79,7 @@ async function chat(
       "content-type": "application/json",
       authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ conversationId, message, external }),
+    body: JSON.stringify({ conversationId, message, contentId }),
   });
   const text = await res.text();
   let json: any = null;
@@ -95,28 +92,6 @@ async function chat(
 // only returns a reply on success, so error bodies never count as replies
 const replyOf = (r: ChatRes): string =>
   r.ok ? (r.json?.reply ?? r.json?.answer ?? "") : "";
-
-type MemoryRow = {
-  id: string;
-  content: string;
-  source: string;
-  isActive: boolean;
-  dims: number | null;
-};
-
-async function waitForMemory(userId: string): Promise<MemoryRow[]> {
-  const started = Date.now();
-  while (Date.now() - started < MEMORY_TIMEOUT_MS) {
-    const rows = await prisma.$queryRaw<MemoryRow[]>`
-      SELECT id, content, source::text AS source, "isActive",
-             vector_dims(embedding) AS dims
-      FROM "UserMemory"
-      WHERE "userId" = ${userId} AND "createdAt" >= ${runStart}`;
-    if (rows.length) return rows;
-    await sleep(1000);
-  }
-  return [];
-}
 
 // ---- main ----
 async function main() {
@@ -187,6 +162,10 @@ async function main() {
     embeddingDims: emb?.dims,
   });
 
+  // full transcript (the row is deleted at the end unless KEEP=1)
+  console.log("\nTRANSCRIPT:\n" + (row?.transcript ?? "(none)"));
+  if (row?.summary) console.log("\nSUMMARY:\n" + row.summary);
+
   if (BAD) {
     check("bad url ends in failed", row?.status === "failed");
   } else {
@@ -206,13 +185,18 @@ async function main() {
     });
     convoIds.push(convo.id);
 
-    const r1 = await chat(token, convo.id, "What is this reel about?");
+    // contentId loads this reel's details into the agent's context
+    const r1 = await chat(
+      token,
+      convo.id,
+      "What is this reel about?",
+      content.id,
+    );
     console.log("chat status", r1.status, "body:", r1.text.slice(0, 200));
     check("chat route returns 2xx", r1.ok);
     check("chat reply is non-empty", replyOf(r1).trim().length > 0);
-    // retrieval check: the reel id should show up in the response (sources etc.)
     check(
-      "query embedding retrieved this reel",
+      "response references this reel",
       JSON.stringify(r1.json ?? r1.text).includes(content.id),
     );
 
@@ -221,43 +205,8 @@ async function main() {
     });
     check("user message saved", msgs.some((m) => m.role === "user"));
     check("assistant message saved", msgs.some((m) => m.role === "assistant"));
-
-    if (EXTERNAL) {
-      const r2 = await chat(
-        token,
-        convo.id,
-        "Give me more context about this reel's topic.",
-        true,
-      );
-      check(
-        "external chat returns reply",
-        r2.ok && replyOf(r2).trim().length > 0,
-      );
-    }
-
-    // ===== 3. MEMORY =====
-    console.log("\n[3] memory");
-    await chat(token, convo.id, "Remember that I am vegetarian.");
-    const mems = await waitForMemory(user.id);
-    console.log("memories:", mems);
-    check("memory row created", mems.length > 0);
-    check("memory is active", mems.some((m) => m.isActive));
-    check("memory embedding is 1024 dims", mems.some((m) => m.dims === 1024));
-    check("memory source is explicit", mems.some((m) => m.source === "explicit"));
-
-    const convo2 = await prisma.conversation.create({
-      data: { userId: user.id },
-    });
-    convoIds.push(convo2.id);
-    const r3 = await chat(
-      token,
-      convo2.id,
-      "Suggest what I should cook for dinner.",
-    );
-    console.log("memory reply:", replyOf(r3).slice(0, 160));
-    check("new conversation uses memory", /veg/i.test(replyOf(r3)));
   } else if (CHAT) {
-    console.log("\n[2/3] chat + memory skipped (reel not ready or BAD=1)");
+    console.log("\n[2] chat skipped (reel not ready or BAD=1)");
   }
 
   // ===== summary =====
@@ -274,9 +223,6 @@ async function main() {
     // existing user: remove only what this run created
     await prisma.content.deleteMany({ where: { id: content.id } });
     await prisma.conversation.deleteMany({ where: { id: { in: convoIds } } });
-    await prisma.userMemory.deleteMany({
-      where: { userId: user.id, createdAt: { gte: runStart } },
-    });
   } else {
     await prisma.user.delete({ where: { id: user.id } }); // cascades to everything
   }

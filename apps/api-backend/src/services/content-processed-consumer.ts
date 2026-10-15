@@ -44,6 +44,7 @@ async function handle(p: ContentProcessedPayload) {
         hashtags: p.hashtags,
         thumbnailUrl: p.thumbnailUrl,
         transcript: p.transcript,
+        summary: p.summary ?? undefined,
         ocrText: p.ocrText,
         visionCaption: p.visionCaption,
         tags: p.tags,

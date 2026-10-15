@@ -27,6 +27,7 @@ export const ContentProcessedSchema = z.discriminatedUnion("status", [
     caption: z.string().nullable(),
     hashtags: z.array(z.string()),
     thumbnailUrl: z.string().url().nullable(),
+    summary: z.string().nullable().optional(),
     transcript: z.string().nullable(),
     ocrText: z.string().nullable(),
     visionCaption: z.string().nullable(),

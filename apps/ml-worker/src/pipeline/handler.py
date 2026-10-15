@@ -10,6 +10,7 @@ from schemas.schemas import ContentIngest
 from services.downloader import download_video
 from services.embedder import embed_text
 from services.oembed import fetch_oembed
+from services.summarizer import summarize
 from services.thumbnail import store_thumbnail
 from transcribes.router import transcribe
 
@@ -49,6 +50,12 @@ async def handle_ingest(payload: dict) -> None:
     transcript = await transcribe(dl.video)
     del dl  # never keep media bytes
 
+    # returns None on any failure, so a summary problem never fails the job
+    summary = await summarize(
+        caption=meta.get("caption"),
+        transcript=transcript,
+    )
+
     embed_input = " ".join(
         part
         for part in (
@@ -70,6 +77,7 @@ async def handle_ingest(payload: dict) -> None:
         hashtags=meta.get("hashtags", []),
         thumbnail_url=thumbnail_url,
         transcript=transcript,
+        summary=summary,
     )
     bound.info("pipeline.ready")
 
