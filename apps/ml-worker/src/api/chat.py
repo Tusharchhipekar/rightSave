@@ -34,10 +34,13 @@ class ChatResponse(BaseModel):
     limitHit: bool
 
 
+class DeleteMemoriesResponse(BaseModel):
+    deleted: bool
+
+
 def _check_secret(provided: str | None) -> None:
     expected = settings.INTERNAL_SECRET.get_secret_value()
     if not expected:
-      
         raise HTTPException(status_code=503, detail="chat not configured")
     if not provided or not hmac.compare_digest(provided, expected):
         raise HTTPException(status_code=401, detail="unauthorized")
@@ -77,7 +80,8 @@ async def chat(
         raise HTTPException(status_code=502, detail=detail) from err
 
     if result.answer != FALLBACK_ANSWER:
-        background.add_task(memory.add, body.userId, body.message, result.answer)
+        # User message only: the answer may hold reel transcripts / web text.
+        background.add_task(memory.add, body.userId, body.message)
 
     return ChatResponse(
         answer=result.answer,
@@ -85,3 +89,18 @@ async def chat(
         toolsUsed=result.tools_used,
         limitHit=result.limit_hit,
     )
+
+
+@router.delete("/memories/{user_id}", response_model=DeleteMemoriesResponse)
+async def delete_memories(
+    user_id: str,
+    x_internal_secret: str | None = Header(default=None),
+) -> DeleteMemoriesResponse:
+    """Forget me: delete every mem0 memory for this user."""
+    _check_secret(x_internal_secret)
+    if not user_id.strip() or len(user_id) > 100:
+        raise HTTPException(status_code=400, detail="invalid user id")
+
+    if not await memory.delete_all(user_id):
+        raise HTTPException(status_code=502, detail="memory delete failed")
+    return DeleteMemoriesResponse(deleted=True)

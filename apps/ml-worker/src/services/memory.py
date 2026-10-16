@@ -4,7 +4,8 @@ semantic   - stable facts and preferences about the user
 episodic   - specific events and experiences
 procedural - how the user wants things done
 
-Every call fails soft: a mem0 outage, timeout or missing key must never break chat.
+search() and add() fail soft: a mem0 outage, timeout or missing key must never
+break chat. delete_all() reports failure instead, so "forget me" never lies.
 """
 
 import asyncio
@@ -19,6 +20,7 @@ log = structlog.get_logger()
 
 SEARCH_TIMEOUT_S = 5.0
 ADD_TIMEOUT_S = 20.0
+DELETE_TIMEOUT_S = 20.0
 TYPE_FILTER_OVERFETCH = 4  # mem0's category filter is unreliable; filter client-side
 
 MEMORY_TYPES = ("semantic", "episodic", "procedural")
@@ -124,17 +126,22 @@ async def search(
     return rows[:limit]
 
 
-async def add(user_id: str, user_message: str, assistant_message: str) -> None:
-    """Let mem0 extract durable memories from the last exchange. Never raises."""
+async def add(
+    user_id: str,
+    user_message: str,
+    assistant_message: str | None = None,  # ignored: kept so existing call sites don't break
+) -> None:
+    """Let mem0 extract durable memories from the user's message. Never raises.
+
+    Only the user's words are sent. The assistant's answer can contain reel
+    transcripts or web text, which mem0 would store as "facts" about the user.
+    """
     if not enabled() or not user_message.strip():
         return
     try:
         await asyncio.wait_for(
             _get_client().add(
-                [
-                    {"role": "user", "content": user_message},
-                    {"role": "assistant", "content": assistant_message},
-                ],
+                [{"role": "user", "content": user_message}],
                 user_id=user_id,
                 custom_categories=CATEGORIES,
             ),
@@ -142,3 +149,18 @@ async def add(user_id: str, user_message: str, assistant_message: str) -> None:
         )
     except Exception as err:
         log.warning("memory.add_failed", error=str(err))
+
+
+async def delete_all(user_id: str) -> bool:
+    """Delete every memory mem0 holds for this user. True on success, False on failure."""
+    if not enabled():
+        return False
+    try:
+        await asyncio.wait_for(
+            _get_client().delete_all(user_id=user_id),
+            timeout=DELETE_TIMEOUT_S,
+        )
+        return True
+    except Exception as err:
+        log.warning("memory.delete_all_failed", error=str(err))
+        return False

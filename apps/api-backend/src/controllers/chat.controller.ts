@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { prisma } from "@repo/db-prisma";
 import { chatRequestSchema, type ChatResponse } from "@repo/types";
-import { callMlChat } from "../services/ml-chat-client";
+import { callMlChat, deleteMlMemories } from "../services/ml-chat-client";
 
 const HISTORY_LIMIT = 10;
 
@@ -101,5 +101,15 @@ export async function chat(req: Request, res: Response) {
   } catch (err) {
     console.error("chat: unexpected error", err);
     return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function forgetMemories(req: Request, res: Response) {
+  try {
+    await deleteMlMemories(req.user!.id);
+    return res.status(200).json({ deleted: true });
+  } catch (err) {
+    console.error("chat: memory delete failed", err);
+    return res.status(502).json({ error: "Could not delete memories, please retry" });
   }
 }
