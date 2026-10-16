@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 
 from agent.context import ToolContext
@@ -16,7 +17,7 @@ SPEC: dict[str, Any] = {
             "need exact wording or details the summary leaves out. Use it after "
             "search_saved_content when the snippet is not enough to answer, or when the "
             "user asks something specific about one saved reel or post. If the user is "
-            "chatting about one specific reel, you can omit content_id."
+            "chatting about one specific reel, omit content_id."
         ),
         "parameters": {
             "type": "object",
@@ -33,8 +34,18 @@ SPEC: dict[str, Any] = {
 }
 
 
+def _is_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(value)
+        return True
+    except ValueError:
+        return False
+
+
 async def run(ctx: ToolContext, args: dict[str, Any]) -> dict[str, Any]:
-    content_id = (args.get("content_id") or ctx.content_id or "").strip()
+    requested = str(args.get("content_id") or "").strip()
+    # Ignore ids the model made up; fall back to the reel the user opened.
+    content_id = requested if _is_uuid(requested) else (ctx.content_id or "")
     if not content_id:
         return {"error": "No content_id given. Search saved content first to find one."}
 
@@ -47,7 +58,6 @@ async def run(ctx: ToolContext, args: dict[str, Any]) -> dict[str, Any]:
     if truncated:
         transcript = transcript[:MAX_TRANSCRIPT_CHARS]
 
-    # summary comes first so the model reads the key points before the long transcript
     return {
         "id": row["id"],
         "type": row["type"],

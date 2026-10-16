@@ -14,6 +14,7 @@ from messaging.consumer import run_consumer
 from messaging.producer import stop_producer
 from pipeline.handler import handle_dead_letter, handle_ingest
 from services.embedder import close_embedder
+from services.memory_cache import close_memory_cache
 
 logging.basicConfig(level=settings.LOG_LEVEL, format="%(message)s")
 structlog.configure(
@@ -62,6 +63,7 @@ async def lifespan(app: FastAPI):
         await close_embedder()
         await close_web_search()
         await close_llm()
+        await close_memory_cache()
         await close_pool()
         log.info("worker.stopped")
 

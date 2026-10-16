@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from agent.context import ToolContext
+from agent.prompt import memory_block
 from agent.runner import FALLBACK_ANSWER, run_agent
 from config import settings
 from services import memory
@@ -72,15 +73,21 @@ async def chat(
     ctx = ToolContext(user_id=body.userId, content_id=body.contentId)
     history = [m.model_dump() for m in body.history]
 
+    memories = await memory.profile_memories(body.userId)
+
     try:
-        result = await run_agent(ctx, body.message, history)
+        result = await run_agent(
+            ctx,
+            body.message,
+            history,
+            memory_context=memory_block(memories),
+        )
     except Exception as err:  # noqa: BLE001
         log.error("chat.failed", error=repr(err), exc_info=True)
         detail = f"agent failed: {err!r}" if settings.EXPOSE_ERRORS else "agent failed"
         raise HTTPException(status_code=502, detail=detail) from err
 
     if result.answer != FALLBACK_ANSWER:
-        # User message only: the answer may hold reel transcripts / web text.
         background.add_task(memory.add, body.userId, body.message)
 
     return ChatResponse(

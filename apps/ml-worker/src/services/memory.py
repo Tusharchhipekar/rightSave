@@ -15,15 +15,17 @@ import structlog
 from mem0 import AsyncMemoryClient
 
 from config import settings
+from services.memory_cache import get_user_memories, invalidate
 
 log = structlog.get_logger()
 
 SEARCH_TIMEOUT_S = 5.0
 ADD_TIMEOUT_S = 20.0
 DELETE_TIMEOUT_S = 20.0
-TYPE_FILTER_OVERFETCH = 4  # mem0's category filter is unreliable; filter client-side
+TYPE_FILTER_OVERFETCH = 4
 
 MEMORY_TYPES = ("semantic", "episodic", "procedural")
+CACHED_TYPES = ("semantic",)  
 
 CATEGORIES: list[dict[str, str]] = [
     {
@@ -81,6 +83,10 @@ def _get_client() -> AsyncMemoryClient:
     return _client
 
 
+def _memory_type(row: dict[str, Any]) -> str | None:
+    return next((c for c in (row.get("categories") or []) if c in MEMORY_TYPES), None)
+
+
 async def search(
     user_id: str,
     query: str,
@@ -114,7 +120,7 @@ async def search(
         {
             "id": r.get("id"),
             "memory": r["memory"],
-            "type": next((c for c in (r.get("categories") or []) if c in MEMORY_TYPES), None),
+            "type": _memory_type(r),
             "score": r.get("score"),
             "created_at": r.get("created_at"),
         }
@@ -126,15 +132,39 @@ async def search(
     return rows[:limit]
 
 
+async def _load_profile(user_id: str) -> list[str]:
+    """All cached-type memories for this user, newest first. Raises on failure."""
+    if not enabled():
+        return []
+    res = await asyncio.wait_for(
+        _get_client().get_all(filters={"user_id": user_id}, page_size=100),
+        timeout=SEARCH_TIMEOUT_S,
+    )
+    rows = [
+        r
+        for r in (res or {}).get("results", [])
+        if r.get("memory") and _memory_type(r) in CACHED_TYPES
+    ]
+    rows.sort(key=lambda r: r.get("updated_at") or r.get("created_at") or "", reverse=True)
+    return [r["memory"] for r in rows]
+
+
+async def profile_memories(user_id: str) -> list[str]:
+    """Semantic memories for a chat's system prompt, served from Redis. Never raises."""
+    return await get_user_memories(user_id, _load_profile)
+
+
 async def add(
     user_id: str,
     user_message: str,
-    assistant_message: str | None = None,  # ignored: kept so existing call sites don't break
+    assistant_message: str | None = None, 
 ) -> None:
     """Let mem0 extract durable memories from the user's message. Never raises.
 
     Only the user's words are sent. The assistant's answer can contain reel
     transcripts or web text, which mem0 would store as "facts" about the user.
+    The Redis profile cache is not cleared here: it expires on its TTL, so new
+    memories reach new chats within that window.
     """
     if not enabled() or not user_message.strip():
         return
@@ -160,6 +190,7 @@ async def delete_all(user_id: str) -> bool:
             _get_client().delete_all(user_id=user_id),
             timeout=DELETE_TIMEOUT_S,
         )
+        await invalidate(user_id)
         return True
     except Exception as err:
         log.warning("memory.delete_all_failed", error=str(err))

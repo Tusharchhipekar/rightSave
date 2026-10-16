@@ -4,6 +4,7 @@ httpx==0.28.1
 
 # Kafka
 aiokafka==0.14.0
+redis==8.1.0
 
 # Agent (OpenAI SDK + tools)
 openai==3.22.1
