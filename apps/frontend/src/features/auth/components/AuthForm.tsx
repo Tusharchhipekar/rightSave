@@ -8,9 +8,13 @@ import { useSignin, useSignup } from "../hooks/useAuth";
 
 type Mode = "signin" | "signup";
 
+const DEMO_EMAIL = process.env.NEXT_PUBLIC_DEMO_EMAIL;
+const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
+
 export function AuthForm() {
   const [mode, setMode] = useState<Mode>("signin");
   const [showPassword, setShowPassword] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [fields, setFields] = useState({
     identifier: "",
     username: "",
@@ -49,6 +53,17 @@ export function AuthForm() {
         password: fields.password,
       });
     }
+  };
+
+  const onDemoLogin = () => {
+    if (!DEMO_EMAIL || !DEMO_PASSWORD) return;
+    signup.reset();
+    setMode("signin"); // so a failure shows in the sign-in error callout
+    setDemoLoading(true);
+    signin.mutate(
+      { identifier: DEMO_EMAIL, password: DEMO_PASSWORD },
+      { onSettled: () => setDemoLoading(false) },
+    );
   };
 
   return (
@@ -99,8 +114,7 @@ export function AuthForm() {
         </button>
       </div>
 
-      {/* Google Login Section */}
-
+      {/* Google + Demo Login Section */}
       <div className="mt-5">
         <button
           type="button"
@@ -131,6 +145,24 @@ export function AuthForm() {
           </svg>
           <span>Continue with Google</span>
         </button>
+
+        {DEMO_EMAIL && DEMO_PASSWORD && (
+          <button
+            type="button"
+            onClick={onDemoLogin}
+            disabled={signin.isPending || signup.isPending}
+            className="mt-2.5 w-full py-3 px-4 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-medium text-xs hover:bg-surface-container-high transition-all flex items-center justify-center gap-2.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {demoLoading ? (
+              <>
+                <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                <span>Signing in...</span>
+              </>
+            ) : (
+              <span>Demo Login</span>
+            )}
+          </button>
+        )}
 
         <div className="relative my-4 text-center">
           <div className="absolute inset-0 flex items-center">
@@ -257,7 +289,7 @@ export function AuthForm() {
           disabled={mutation.isPending}
           className="w-full py-3.5 px-4 rounded-xl bg-primary-container text-on-primary-container font-semibold text-sm hover:bg-primary hover:text-on-primary shadow-[0_4px_20px_rgba(128,131,255,0.35)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
         >
-          {mutation.isPending ? (
+          {mutation.isPending && !demoLoading ? (
             <>
               <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
               <span>{mode === "signin" ? "Signing in..." : "Creating account..."}</span>
