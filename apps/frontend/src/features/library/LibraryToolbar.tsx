@@ -167,7 +167,10 @@ export default function LibraryToolbar({
         </div>
 
         {/* Collection filter pills */}
-        <div className="flex items-center gap-space-xs overflow-x-auto pb-1 scrollbar-none">
+        <div
+          id="collections"
+          className="flex items-center gap-space-xs overflow-x-auto pb-1 scrollbar-none scroll-mt-24"
+        >
           <button
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-label-md text-label-md font-semibold whitespace-nowrap shadow-xs transition-all cursor-pointer ${
               activeCollectionId === null

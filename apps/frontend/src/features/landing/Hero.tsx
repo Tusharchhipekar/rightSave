@@ -21,8 +21,7 @@ export default function Hero() {
         <div className="inline-flex items-center gap-space-xs px-space-md py-1.5 rounded-full bg-surface-container-high text-on-surface shadow-md">
           <span className="text-secondary font-label-code-sm text-label-code-sm">⚡</span>
           <span className="font-label-code-sm text-label-code-sm tracking-wide text-on-surface-variant">
-            Over <span className="text-secondary font-semibold">2.4M</span> saved Reels processed
-            with zero manual tagging
+            Save reels with a DM. <span className="text-secondary font-semibold">Search them by what was said.</span>
           </span>
         </div>
 

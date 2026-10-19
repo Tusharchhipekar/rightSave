@@ -168,8 +168,17 @@ export const libraryApi = {
   listConversations: () =>
     apiClient<{ items: ConversationItem[] }>("/chat/conversations"),
 
-  getConversation: (id: string) =>
-    apiClient<ConversationDetail>(`/chat/conversations/${id}/messages`),
+  getConversation: async (id: string): Promise<ConversationDetail> => {
+    const res = await apiClient<{
+      conversation: { id: string; title: string | null };
+      items: ChatMessage[];
+    }>(`/chat/conversations/${id}/messages`);
+    return {
+      id: res.conversation.id,
+      title: res.conversation.title,
+      messages: res.items,
+    };
+  },
 
   getInstagramStatus: () => apiClient<InstagramStatus>("/instagram/status"),
 

@@ -14,12 +14,6 @@ export default function ReelCard({ reel }: { reel: DemoReel }) {
               <Icon name="movie" className="text-[40px]" />
             </div>
           )}
-          <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-surface-container-lowest/80 backdrop-blur-sm text-primary font-label-code-sm text-label-code-sm">
-            {reel.match}
-          </div>
-          <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-surface-container-lowest/80 text-on-surface font-label-code-sm text-label-code-sm flex items-center gap-1">
-            <Icon name="schedule" className="text-[12px]" /> {reel.duration}
-          </div>
         </div>
 
         <div>
@@ -35,7 +29,7 @@ export default function ReelCard({ reel }: { reel: DemoReel }) {
         <div className="rounded-lg bg-surface-container-lowest p-2.5">
           <div className="flex items-center gap-1 text-primary font-label-code-sm text-label-code-sm mb-1">
             <Icon name="psychology" className="text-[14px]" />
-            <span>AI Extracted Key Takeaway</span>
+            <span>Summary</span>
           </div>
           <p className="font-body-sm text-body-sm text-on-surface-variant leading-snug">
             {reel.summary}
@@ -46,7 +40,7 @@ export default function ReelCard({ reel }: { reel: DemoReel }) {
       <div className="mt-3 pt-2 flex items-center justify-between text-on-surface-variant font-label-code-sm text-label-code-sm">
         <span>{reel.saved}</span>
         <span className="text-primary hover:underline cursor-pointer flex items-center gap-0.5">
-          Jump to reel <Icon name="open_in_new" className="text-[12px]" />
+          Open reel <Icon name="open_in_new" className="text-[12px]" />
         </span>
       </div>
     </div>

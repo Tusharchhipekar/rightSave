@@ -9,7 +9,7 @@ import { useAuthStore } from "@/features/auth/store";
 
 const NAV = [
   { label: "Library", href: "/library" },
-  { label: "Collections", href: "/collections" },
+  { label: "Collections", href: "/library#collections" },
   { label: "Pricing", href: "/pricing" },
 ];
 

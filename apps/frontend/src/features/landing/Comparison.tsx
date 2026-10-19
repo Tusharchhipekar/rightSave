@@ -18,23 +18,33 @@ const BEFORE: Item[] = [
     title: "Unorganized digital mess",
     body: "Manual Instagram folders require tedious micro-management and constant tagging that nobody maintains after day two.",
   },
+  {
+    icon: "search_off",
+    title: "Nobody to ask",
+    body: "Instagram can't answer questions about what you saved. You can only scroll and hope you recognize it.",
+  },
 ];
 
 const AFTER: Item[] = [
   {
     icon: "manage_search",
-    title: "Natural language memory query",
-    body: 'Type what you recall: "that video of a guy building a wooden standing desk with hidden cable drawer" and watch it appear instantly.',
+    title: "Search by meaning",
+    body: "Describe what you remember and RightSave finds the reel. It searches the caption, hashtags and what was said in the video.",
   },
   {
     icon: "transcribe",
-    title: "Full verbatim speech & OCR",
-    body: "Every voiceover, background soundtrack dialogue, and on-screen slide bullet is transcribed, indexed, and made clickable by second.",
+    title: "Speech turned into text",
+    body: "The audio of every saved reel is transcribed, so spoken recipes, tips and walkthroughs become searchable.",
   },
   {
-    icon: "hub",
-    title: "Automatic semantic clustering",
-    body: "Zero tags needed. AI groups your reels by intent (Home Decor, Engineering, Recipes, Workout splits, Travel itineraries).",
+    icon: "summarize",
+    title: "Summaries and your own collections",
+    body: "Each reel gets an AI summary, with any tools, apps or books the creator recommends listed. Group reels into collections you name.",
+  },
+  {
+    icon: "forum",
+    title: "Chat with your saved reels",
+    body: "Ask a question and get an answer built from your saves, with links to the reels it used. The web is used only when your library isn't enough.",
   },
 ];
 

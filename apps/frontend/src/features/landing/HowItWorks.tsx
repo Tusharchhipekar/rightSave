@@ -15,47 +15,46 @@ type Step = {
 const STEPS: Step[] = [
   {
     num: "01",
-    tag: "SAVE",
-    title: "Keep saving naturally",
-    body: "Keep saving useful Reels on Instagram exactly as you already do. No change in your muscle memory or everyday browsing habits.",
-    icon: "bookmark_add",
+    tag: "LINK",
+    title: "Connect your Instagram",
+    body: "Click Connect Instagram in the app to get a short code, then send that code to RightSave in a DM. You only do this once.",
+    icon: "link",
     iconColor: "text-primary",
-    chipTitle: "Direct In-App Save",
-    chipSub: "Tap bookmark icon in IG feed",
+    chipTitle: "One-time link",
+    chipSub: "Send the code in a DM",
   },
   {
     num: "02",
-    tag: "SYNC",
-    title: "Seamless bot or auto-sync",
+    tag: "SAVE",
+    title: "Send reels in a DM",
     body: (
       <>
-        Share or forward your saved Reels directly to your dedicated{" "}
-        <span className="text-primary font-mono font-medium">@rightsave.cloud</span>, or authenticate continuous
-        background synchronization.
+        Share any reel to <span className="text-primary font-mono font-medium">@rightsave.cloud</span> on
+        Instagram. Reply with a name right after and your reels go into a collection.
       </>
     ),
     icon: "send",
     iconColor: "text-secondary",
-    chipTitle: "Instagram / DM Dispatch",
-    chipSub: "Immediate 1-tap ingestion",
+    chipTitle: "Instagram DM",
+    chipSub: "Share, then name a collection",
   },
   {
     num: "03",
-    tag: "RETRIEVE",
-    title: "Audio & vision extraction",
-    body: "RightSave extracts audio speech-to-text transcripts, visual frame OCR, and conceptual topics into your encrypted, private vector repository.",
+    tag: "ASK",
+    title: "Transcribed, summarized, searchable",
+    body: "RightSave transcribes the audio, reads the caption and hashtags, writes a summary, and indexes it. Then you can search your library or chat with your saved reels.",
     icon: "saved_search",
     iconColor: "text-primary",
-    chipTitle: "Omniscient Recall",
-    chipSub: "Query by fragment or theme",
+    chipTitle: "Search and chat",
+    chipSub: "Ask in your own words",
   },
 ];
 
 const PIPELINE = [
-  { icon: "photo_camera_front", color: "text-secondary", title: "Instagram", sub: "Saved collections" },
-  { icon: "forward_to_inbox", color: "text-primary", title: "RightSave DM Bot", sub: "Instant queue push" },
-  { icon: "graphic_eq", color: "text-secondary", title: "AI Comprehension", sub: "Whisper + Vision OCR" },
-  { icon: "bolt", color: "text-primary", title: "Instant Natural Query", sub: "Sub-50ms vector return" },
+  { icon: "photo_camera_front", color: "text-secondary", title: "Instagram", sub: "Reels you share" },
+  { icon: "forward_to_inbox", color: "text-primary", title: "RightSave DM Bot", sub: "Saves it and queues it" },
+  { icon: "graphic_eq", color: "text-secondary", title: "AI Comprehension", sub: "Transcript + summary" },
+  { icon: "manage_search", color: "text-primary", title: "Search & Chat", sub: "Find it or ask about it" },
 ];
 
 export default function HowItWorks() {
@@ -69,8 +68,7 @@ export default function HowItWorks() {
           How your reels turn into searchable intellect
         </h2>
         <p className="font-body-lg text-body-lg text-on-surface-variant max-w-xl mt-3">
-          From raw Instagram video streams to instantaneous, context-aware memory retrieval in 3
-          transparent stages.
+          From a reel you share on Instagram to answers you can search and chat with, in 3 steps.
         </p>
       </div>
 

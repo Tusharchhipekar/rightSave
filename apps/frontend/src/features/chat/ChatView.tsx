@@ -106,7 +106,7 @@ export default function ChatView({
   const [input, setInput] = useState("");
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const convQuery = useQuery({
     queryKey: ["conversation", conversationId],
@@ -120,7 +120,8 @@ export default function ChatView({
   const messages = convQuery.data?.messages ?? [];
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages.length, pending]);
 
   const sendMutation = useMutation({
@@ -214,7 +215,10 @@ export default function ChatView({
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex-1 min-h-0 overflow-y-auto px-space-md md:px-space-lg py-space-lg">
+      <div
+        ref={scrollRef}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-space-md md:px-space-lg py-space-lg"
+      >
         <div className="max-w-3xl mx-auto flex flex-col gap-space-md">
           {loadingHistory && (
             <div className="flex flex-col gap-3 animate-pulse">
@@ -271,7 +275,6 @@ export default function ChatView({
             </>
           )}
 
-          <div ref={endRef} />
         </div>
       </div>
 
