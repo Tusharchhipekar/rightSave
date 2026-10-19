@@ -11,17 +11,13 @@ import {
   formatRelativeTime,
   type ContentDetail,
 } from "@/features/library/api";
-import type { ReelDetail, RichPart } from "@/features/library/types";
+import type { ReelDetail } from "@/features/library/types";
+import { ApiError } from "@/shared/lib/api-client";
 import Icon from "@/features/landing/Icon";
 
 type PageProps = {
   params: Promise<{ id: string }>;
 };
-
-function formatSummary(summaryText: string): RichPart[] {
-  if (!summaryText) return ["No detailed summary available yet."];
-  return [summaryText];
-}
 
 function buildTakeaways(detail: ContentDetail) {
   const takeaways = [];
@@ -64,24 +60,23 @@ function buildTakeaways(detail: ContentDetail) {
 export default function ReelDetailPage({ params }: PageProps) {
   const { id } = use(params);
 
-  // Fetch real content from backend
   const contentQuery = useQuery({
     queryKey: ["content-detail", id],
     queryFn: async () => {
       try {
-        const item = await libraryApi.getContent(id);
-        return item;
+        return await libraryApi.getContent(id);
       } catch (err) {
-        console.warn(`[ReelDetailPage] could not fetch reel "${id}":`, err);
-        return null;
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
       }
     },
+    retry: (count, err) =>
+      !(err instanceof ApiError && err.status === 404) && count < 1,
     staleTime: 30000,
   });
 
   const backendData = contentQuery.data;
 
-  // Real user data mapping
   let reel: ReelDetail | null = null;
   if (backendData) {
     reel = {
@@ -103,12 +98,11 @@ export default function ReelDetailPage({ params }: PageProps) {
         backendData.caption && backendData.caption.trim()
           ? backendData.caption.split("\n")[0].slice(0, 80)
           : "Saved Instagram Reel",
-      summary: formatSummary(
+      summary:
         backendData.summary ||
-          backendData.visionCaption ||
-          backendData.caption ||
-          "",
-      ),
+        backendData.visionCaption ||
+        backendData.caption ||
+        "No detailed summary available yet.",
       takeaways: buildTakeaways(backendData),
     };
   }
@@ -125,6 +119,29 @@ export default function ReelDetailPage({ params }: PageProps) {
               <div className="h-72 rounded-2xl bg-surface-container-low" />
             </div>
           </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (contentQuery.isError) {
+    return (
+      <main className="w-full pt-24 bg-surface min-h-screen flex items-center justify-center px-4">
+        <div className="p-8 rounded-2xl bg-surface-container-low border border-outline-variant/30 flex flex-col items-center text-center gap-4 max-w-md">
+          <div className="w-12 h-12 rounded-full bg-error-container/30 text-error flex items-center justify-center">
+            <Icon name="cloud_off" className="text-[28px]" />
+          </div>
+          <h2 className="text-headline-md font-bold text-on-surface">Could not load reel</h2>
+          <p className="text-body-sm text-on-surface-variant">
+            Check your connection or sign in again.
+          </p>
+          <button
+            type="button"
+            onClick={() => contentQuery.refetch()}
+            className="px-5 py-2.5 rounded-xl bg-primary-container text-on-primary-container font-semibold text-body-sm hover:bg-primary hover:text-on-primary transition-all cursor-pointer"
+          >
+            Retry
+          </button>
         </div>
       </main>
     );
@@ -161,6 +178,7 @@ export default function ReelDetailPage({ params }: PageProps) {
             cluster={reel.cluster}
             saved={reel.saved}
             instagramUrl={reel.instagramUrl}
+            contentId={reel.id}
           />
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
             <ReelPlayer image={reel.image} ocr={reel.ocr} />

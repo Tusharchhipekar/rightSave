@@ -103,6 +103,15 @@ export const libraryApi = {
       body: { name },
     }),
 
+  renameCollection: (id: string, name: string) =>
+    apiClient<CollectionItem>(`/collections/${id}`, {
+      method: "PATCH",
+      body: { name },
+    }),
+
+  deleteCollection: (id: string) =>
+    apiClient<void>(`/collections/${id}`, { method: "DELETE" }),
+
   listCollectionContent: (
     collectionId: string,
     params?: { limit?: number; cursor?: string },
@@ -115,6 +124,17 @@ export const libraryApi = {
       `/collections/${collectionId}/content${qs ? `?${qs}` : ""}`,
     );
   },
+
+  addToCollection: (collectionId: string, contentId: string) =>
+    apiClient<void>(`/collections/${collectionId}/content`, {
+      method: "POST",
+      body: { contentId },
+    }),
+
+  removeFromCollection: (collectionId: string, contentId: string) =>
+    apiClient<void>(`/collections/${collectionId}/content/${contentId}`, {
+      method: "DELETE",
+    }),
 
   chat: (payload: ChatMessagePayload) =>
     apiClient<ChatResponse>("/chat", {

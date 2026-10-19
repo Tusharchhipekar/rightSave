@@ -11,6 +11,7 @@ import {
   type CollectionItem,
 } from "@/features/library/api";
 import Icon from "@/features/landing/Icon";
+import { ConfirmDialog, PromptDialog } from "@/shared/components/Dialog";
 
 export default function LibraryPage() {
   const queryClient = useQueryClient();
@@ -19,6 +20,8 @@ export default function LibraryPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [cursor, setCursor] = useState<string | undefined>();
   const [cursorHistory, setCursorHistory] = useState<string[]>([]);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Fetch Collections
   const collectionsQuery = useQuery({
@@ -40,6 +43,41 @@ export default function LibraryPage() {
     mutationFn: (name: string) => libraryApi.createCollection(name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["collections"] });
+    },
+  });
+
+  const removeFromCollectionMutation = useMutation({
+    mutationFn: ({
+      collectionId,
+      contentId,
+    }: {
+      collectionId: string;
+      contentId: string;
+    }) => libraryApi.removeFromCollection(collectionId, contentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["content"] });
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+    },
+  });
+
+  const renameCollectionMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      libraryApi.renameCollection(id, name),
+    onSuccess: () => {
+      setRenameOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+    },
+  });
+
+  const deleteCollectionMutation = useMutation({
+    mutationFn: (id: string) => libraryApi.deleteCollection(id),
+    onSuccess: () => {
+      setDeleteOpen(false);
+      setActiveCollectionId(null);
+      setCursor(undefined);
+      setCursorHistory([]);
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+      queryClient.invalidateQueries({ queryKey: ["content"] });
     },
   });
 
@@ -88,6 +126,7 @@ export default function LibraryPage() {
   });
 
   const collections = collectionsQuery.data ?? [];
+  const activeCollection = collections.find((c) => c.id === activeCollectionId);
   const rawItems = contentQuery.data?.items ?? [];
   const nextCursor = contentQuery.data?.nextCursor ?? null;
 
@@ -109,6 +148,8 @@ export default function LibraryPage() {
       setCursor(prevCursor || undefined);
     }
   };
+
+  const inSearch = searchQuery.trim().length >= 2;
 
   return (
     <main className="w-full pt-16 bg-surface min-h-screen">
@@ -149,14 +190,30 @@ export default function LibraryPage() {
                 <div className="flex items-center gap-space-xs">
                   <Icon name="filter_center_focus" className="text-secondary text-[20px]" />
                   <h2 className="font-headline-md text-headline-md text-on-surface font-bold tracking-tight">
-                    {searchQuery.trim().length >= 2
+                    {inSearch
                       ? `Search Results for "${searchQuery}"`
                       : activeCollectionId
-                      ? `Collection: ${
-                          collections.find((c) => c.id === activeCollectionId)?.name ?? "Selected"
-                        }`
+                      ? `Collection: ${activeCollection?.name ?? "Selected"}`
                       : "Indexed Knowledge Nodes"}
                   </h2>
+                  {activeCollectionId && !inSearch && (
+                    <div className="flex items-center gap-space-xs ml-space-sm">
+                      <button
+                        type="button"
+                        onClick={() => setRenameOpen(true)}
+                        className="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-body-sm cursor-pointer"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteOpen(true)}
+                        className="px-3 py-1.5 rounded-xl bg-error-container/30 hover:bg-error-container/50 text-error text-body-sm cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-space-sm text-on-surface-variant font-label-code text-label-code">
                   <span>
@@ -229,7 +286,7 @@ export default function LibraryPage() {
                       {searchQuery
                         ? "Try searching for another keyword or clear the search filter."
                         : activeCollectionId
-                        ? "Add reels to this collection to organize your knowledge base."
+                        ? "Open a reel and use Add to collection to organize your knowledge base."
                         : "Connect your Instagram account to start syncing and indexing your saved reels."}
                     </p>
                   </div>
@@ -249,7 +306,19 @@ export default function LibraryPage() {
               {!contentQuery.isLoading && cards.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
                   {cards.map((card) => (
-                    <LibraryCard key={card.id} card={card} />
+                    <LibraryCard
+                      key={card.id}
+                      card={card}
+                      onRemove={
+                        activeCollectionId && !inSearch
+                          ? () =>
+                              removeFromCollectionMutation.mutate({
+                                collectionId: activeCollectionId,
+                                contentId: card.id,
+                              })
+                          : undefined
+                      }
+                    />
                   ))}
                 </div>
               )}
@@ -265,6 +334,33 @@ export default function LibraryPage() {
           </div>
         </div>
       </div>
+
+      <PromptDialog
+        open={renameOpen}
+        title="Rename collection"
+        label="Collection name"
+        initialValue={activeCollection?.name ?? ""}
+        confirmLabel="Rename"
+        loading={renameCollectionMutation.isPending}
+        onSubmit={(name) =>
+          activeCollectionId &&
+          renameCollectionMutation.mutate({ id: activeCollectionId, name })
+        }
+        onCancel={() => setRenameOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Delete collection"
+        message={`Delete "${activeCollection?.name ?? "this collection"}"? Reels stay in your library.`}
+        confirmLabel="Delete"
+        danger
+        loading={deleteCollectionMutation.isPending}
+        onConfirm={() =>
+          activeCollectionId && deleteCollectionMutation.mutate(activeCollectionId)
+        }
+        onCancel={() => setDeleteOpen(false)}
+      />
     </main>
   );
 }

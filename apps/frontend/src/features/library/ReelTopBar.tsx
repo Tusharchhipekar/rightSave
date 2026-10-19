@@ -3,10 +3,21 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/features/landing/Icon";
+import AddToCollection from "./AddToCollection";
 
-type Props = { cluster: string; saved: string; instagramUrl: string };
+type Props = {
+  cluster: string;
+  saved: string;
+  instagramUrl: string;
+  contentId: string;
+};
 
-export default function ReelTopBar({ cluster, saved, instagramUrl }: Props) {
+export default function ReelTopBar({
+  cluster,
+  saved,
+  instagramUrl,
+  contentId,
+}: Props) {
   const router = useRouter();
 
   useEffect(() => {
@@ -35,6 +46,7 @@ export default function ReelTopBar({ cluster, saved, instagramUrl }: Props) {
         </div>
       </div>
       <div className="flex items-center flex-wrap gap-space-xs self-start md:self-auto shrink-0">
+        <AddToCollection contentId={contentId} />
         <a
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors font-body-sm text-body-sm shadow-xs"
           href={instagramUrl}

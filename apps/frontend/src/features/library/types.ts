@@ -33,6 +33,6 @@ export type ReelDetail = {
   image: string;
   ocr: { label: string; text: string };
   title: string;
-  summary: RichPart[];
+  summary: string;
   takeaways: ReelTakeaway[];
 };

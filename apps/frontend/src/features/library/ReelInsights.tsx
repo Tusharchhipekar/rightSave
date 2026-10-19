@@ -1,3 +1,4 @@
+import ReactMarkdown from "react-markdown";
 import Icon from "@/features/landing/Icon";
 import type { ReelDetail, RichPart } from "./types";
 import ReelAskBar from "./ReelAskBar";
@@ -41,9 +42,9 @@ export default function ReelInsights({
           <div className="w-7 h-7 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
             <Icon name="lightbulb" className="text-[18px]" />
           </div>
-          <p className="font-body-lg text-body-md text-on-surface leading-relaxed">
-            <Rich parts={summary} />
-          </p>
+          <div className="min-w-0 font-body-lg text-body-md text-on-surface leading-relaxed [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_strong]:font-semibold">
+            <ReactMarkdown>{summary}</ReactMarkdown>
+          </div>
         </div>
       </div>
 
