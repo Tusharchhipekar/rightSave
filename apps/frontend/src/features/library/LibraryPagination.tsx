@@ -1,32 +1,54 @@
+"use client";
+
 import Icon from "@/features/landing/Icon";
 
-const pageBtn =
-  "w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors";
+type LibraryPaginationProps = {
+  hasMore?: boolean;
+  onNext?: () => void;
+  onPrev?: () => void;
+  canPrev?: boolean;
+  isFetching?: boolean;
+};
 
-export default function LibraryPagination() {
+export default function LibraryPagination({
+  hasMore = false,
+  onNext,
+  onPrev,
+  canPrev = false,
+  isFetching = false,
+}: LibraryPaginationProps) {
+  if (!hasMore && !canPrev) return null;
+
   return (
     <section className="flex flex-col md:flex-row items-center gap-space-md pt-space-md pb-space-lg justify-center">
       <div className="flex items-center gap-space-sm font-label-code text-label-code justify-center">
-        <div className="flex items-center gap-1 ml-space-sm">
+        <div className="flex items-center gap-2">
           <button
-            className="w-8 h-8 rounded-lg bg-surface-container-high text-on-surface flex items-center justify-center opacity-50 cursor-not-allowed"
-            disabled
+            onClick={onPrev}
+            disabled={!canPrev || isFetching}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1 text-body-sm transition-colors ${
+              canPrev && !isFetching
+                ? "bg-surface-container hover:bg-surface-container-high text-on-surface cursor-pointer"
+                : "bg-surface-container-low text-outline opacity-50 cursor-not-allowed"
+            }`}
             type="button"
           >
-            <Icon name="chevron_left" className="text-[16px]" />
+            <Icon name="chevron_left" className="text-[18px]" />
+            <span>Previous</span>
           </button>
+
           <button
-            className="w-8 h-8 rounded-lg bg-primary-container text-on-primary-container font-semibold flex items-center justify-center shadow-xs"
+            onClick={onNext}
+            disabled={!hasMore || isFetching}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1 text-body-sm transition-colors ${
+              hasMore && !isFetching
+                ? "bg-primary-container text-on-primary-container font-semibold hover:bg-primary hover:text-on-primary cursor-pointer shadow-xs"
+                : "bg-surface-container-low text-outline opacity-50 cursor-not-allowed"
+            }`}
             type="button"
           >
-            1
-          </button>
-          <button className={pageBtn} type="button">2</button>
-          <button className={pageBtn} type="button">3</button>
-          <span className="px-1 text-outline-variant">...</span>
-          <button className={pageBtn} type="button">104</button>
-          <button className={pageBtn} type="button">
-            <Icon name="chevron_right" className="text-[16px]" />
+            <span>Next</span>
+            <Icon name="chevron_right" className="text-[18px]" />
           </button>
         </div>
       </div>

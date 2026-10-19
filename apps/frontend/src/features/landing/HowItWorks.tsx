@@ -30,7 +30,7 @@ const STEPS: Step[] = [
     body: (
       <>
         Share or forward your saved Reels directly to your dedicated{" "}
-        <span className="text-primary font-mono">@rightsave_bot</span>, or authenticate continuous
+        <span className="text-primary font-mono font-medium">@rightsave.cloud</span>, or authenticate continuous
         background synchronization.
       </>
     ),

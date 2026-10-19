@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Icon from "@/features/landing/Icon";
 
 const LINKS = [
   { label: "Library", href: "/library" },
@@ -11,6 +12,9 @@ export default function AppFooter() {
     <footer className="w-full bg-surface-container-lowest py-space-xl mt-space-xl">
       <div className="w-full px-margin flex flex-col md:flex-row items-center justify-between gap-space-md font-body-sm text-body-sm text-on-surface-variant">
         <div className="flex items-center gap-space-sm">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-container/20 text-primary border border-primary-container/30 shadow-sm">
+            <Icon name="sync_saved_locally" className="text-[16px]" />
+          </div>
           <span className="font-headline-sm text-headline-sm text-on-surface">RightSave AI</span>
           <span>© 2026 Semantic Reel Memory. All rights reserved.</span>
         </div>

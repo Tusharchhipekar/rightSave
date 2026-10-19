@@ -1,17 +1,24 @@
 /* eslint-disable @next/next/no-img-element */
+import Link from "next/link";
 import Icon from "@/features/landing/Icon";
-import type { LibraryCardData } from "./library-data";
+import type { LibraryCardData } from "./types";
 
 export default function LibraryCard({ card: c }: { card: LibraryCardData }) {
   return (
-    <article className="flex flex-col rounded-2xl bg-surface-container-low overflow-hidden shadow-md group hover:bg-surface-container transition-all duration-300">
+    <Link href={`/library/${c.id}`} className="flex">
+    <article className="flex-1 flex flex-col rounded-2xl bg-surface-container-low overflow-hidden shadow-md group hover:bg-surface-container transition-all duration-300">
       <div className="relative w-full aspect-[9/10] overflow-hidden bg-surface-container-highest">
-        {c.image && (
+        {c.image ? (
           <img
             alt={c.alt}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             src={c.image}
           />
+        ) : (
+          <div className="w-full h-full bg-linear-to-br from-surface-container to-surface-container-highest flex flex-col items-center justify-center gap-2 text-outline group-hover:text-primary transition-colors">
+            <Icon name="image" className="text-4xl text-primary/70 group-hover:scale-110 transition-transform" />
+            <span className="font-label-code-sm text-[11px] text-on-surface-variant font-medium">Reel Snapshot</span>
+          </div>
         )}
         <div className="absolute inset-0 bg-linear-to-t from-surface-container-low via-surface-container-low/20 to-transparent"></div>
         {c.creator && (
@@ -61,5 +68,6 @@ export default function LibraryCard({ card: c }: { card: LibraryCardData }) {
         </div>
       </div>
     </article>
+    </Link>
   );
 }
