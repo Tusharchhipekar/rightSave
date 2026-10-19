@@ -8,6 +8,7 @@ import { libraryApi, type InstagramStatus } from "@/features/library/api";
 
 const NAV = [
   { label: "Search", href: "/library" },
+  { label: "Chat", href: "/chat" },
   { label: "Library", href: "/library" },
   { label: "How It Works", href: "/" },
 ];

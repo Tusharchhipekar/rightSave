@@ -56,6 +56,29 @@ export type ChatResponse = {
   toolsUsed?: any;
 };
 
+export type ConversationItem = {
+  id: string;
+  title: string | null;
+  lastMessageText: string | null;
+  lastMessageAt: string | null;
+  createdAt: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  sources: unknown;
+  toolsUsed: unknown;
+  createdAt: string;
+};
+
+export type ConversationDetail = {
+  id: string;
+  title: string | null;
+  messages: ChatMessage[];
+};
+
 export type InstagramStatus = {
   linked: boolean;
   username: string | null;
@@ -141,6 +164,12 @@ export const libraryApi = {
       method: "POST",
       body: payload,
     }),
+
+  listConversations: () =>
+    apiClient<{ items: ConversationItem[] }>("/chat/conversations"),
+
+  getConversation: (id: string) =>
+    apiClient<ConversationDetail>(`/chat/conversations/${id}/messages`),
 
   getInstagramStatus: () => apiClient<InstagramStatus>("/instagram/status"),
 

@@ -11,7 +11,9 @@ export async function chat(req: Request, res: Response) {
 
     const parsed = chatRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res
+        .status(400)
+        .json({ error: "Invalid request", details: parsed.error.flatten() });
     }
     const { conversationId, message, contentId } = parsed.data;
 
@@ -29,7 +31,8 @@ export async function chat(req: Request, res: Response) {
         where: { id: convId, userId },
         select: { id: true },
       });
-      if (!conv) return res.status(404).json({ error: "Conversation not found" });
+      if (!conv)
+        return res.status(404).json({ error: "Conversation not found" });
     }
 
     let history: { role: "user" | "assistant"; content: string }[] = [];
@@ -51,7 +54,9 @@ export async function chat(req: Request, res: Response) {
       ml = await callMlChat({ userId, message, history, contentId });
     } catch (err) {
       console.error("chat: ml-worker call failed", err);
-      return res.status(502).json({ error: "Chat service unavailable, please retry" });
+      return res
+        .status(502)
+        .json({ error: "Chat service unavailable, please retry" });
     }
 
     if (!convId) {
@@ -110,6 +115,79 @@ export async function forgetMemories(req: Request, res: Response) {
     return res.status(200).json({ deleted: true });
   } catch (err) {
     console.error("chat: memory delete failed", err);
-    return res.status(502).json({ error: "Could not delete memories, please retry" });
+    return res
+      .status(502)
+      .json({ error: "Could not delete memories, please retry" });
+  }
+}
+
+const MESSAGES_LIMIT = 200;
+
+export async function listConversations(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const limit = Math.min(Number(req.query.limit) || 50, 100);
+
+    const rows = await prisma.conversation.findMany({
+      where: { userId, lastMessageAt: { not: null } },
+      orderBy: { lastMessageAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        lastMessageText: true,
+        lastMessageAt: true,
+        createdAt: true,
+      },
+    });
+
+    return res.status(200).json({ items: rows });
+  } catch (err) {
+    console.error("chat: list conversations failed", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function listConversationMessages(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const id = req.params.id as string;
+
+    const conversation = await prisma.conversation.findFirst({
+      where: { id, userId },
+      select: { id: true, title: true, createdAt: true },
+    });
+    if (!conversation) {
+      return res
+        .status(404)
+        .json({ message: "Conversation not found", code: "NOT_FOUND" });
+    }
+
+    // Newest N, returned oldest-first so the UI can render top to bottom.
+    const rows = await prisma.message.findMany({
+      where: { conversationId: id },
+      select: {
+        id: true,
+        role: true,
+        content: true,
+        sources: true,
+        toolsUsed: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: MESSAGES_LIMIT,
+    });
+
+    const items = rows.reverse().map((m) => ({
+      ...m,
+      role: String(m.role).toLowerCase() as "user" | "assistant",
+    }));
+
+    return res.status(200).json({ conversation, items });
+  } catch (err) {
+    console.error("chat: listConversationMessages failed", err);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", code: "INTERNAL" });
   }
 }
