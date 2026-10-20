@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1
+
+FROM oven/bun:1-slim AS base
+
+FROM base AS pruner
+WORKDIR /app
+RUN bun add -g turbo
+COPY . .
+RUN turbo prune @repo/api-backend --docker
+
+# Full install (incl. devDependencies) — needed to run `prisma generate`,
+# discarded after; only its generated client output makes it into the runner.
+# prisma7.config.ts reads DATABASE_URL at load time, so generate gets a dummy one.
+FROM base AS builder
+WORKDIR /app
+COPY --from=pruner /app/out/json/ .
+RUN bun install --frozen-lockfile
+COPY --from=pruner /app/out/full/ .
+RUN cd packages/db-prisma && DATABASE_URL=postgresql://build:build@localhost:5432/build bunx prisma generate --config prisma7.config.ts
+
+# Production-only install, kept separate so devDependencies (prisma CLI,
+# typescript, @types/*) never reach the runtime image.
+FROM base AS prod-deps
+WORKDIR /app
+COPY --from=pruner /app/out/json/ .
+RUN bun install --frozen-lockfile --production --omit=peer
+
+FROM oven/bun:1-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN addgroup -S -g 1001 api-backend \
+    && adduser -S -u 1001 -G api-backend api-backend
+
+COPY --from=prod-deps --chown=api-backend:api-backend /app .
+COPY --from=pruner --chown=api-backend:api-backend /app/out/full/ .
+COPY --from=builder --chown=api-backend:api-backend /app/packages/db-prisma/src/generated ./packages/db-prisma/src/generated
+
+USER api-backend
+EXPOSE 4002
+CMD ["bun", "./apps/api-backend/src/index.ts"]

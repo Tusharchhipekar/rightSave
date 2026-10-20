@@ -6,6 +6,7 @@ import { publish, Topics, type AuthEventPayload } from "@repo/kafka";
 import { generateAccessToken, generateRefreshToken } from "../utils/token";
 import { REFRESH_COOKIE_OPTIONS } from "../utils/cookie-options";
 import { config } from "../config/config";
+import type { GoogleProfile } from "../types/google.type";
 
 export const signupController = async (req: Request, res: Response) => {
   try {
@@ -264,7 +265,9 @@ export const changePasswordController = async (req: Request, res: Response) => {
     if (currentPassword === newPassword) {
       res
         .status(400)
-        .json({ message: "New password must be different from the current one" });
+        .json({
+          message: "New password must be different from the current one",
+        });
       return;
     }
 
@@ -327,5 +330,106 @@ export const changePasswordController = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ message: "Something went wrong. Please try again later." });
+  }
+};
+
+const generateUsername = async (email: string): Promise<string> => {
+  const base =
+    email
+      .split("@")[0]!
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "")
+      .slice(0, 20) || "user";
+
+  let candidate = base;
+  while (await prisma.user.findUnique({ where: { username: candidate } })) {
+    candidate = `${base}${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+  return candidate;
+};
+
+export const googleCallbackController = async (req: Request, res: Response) => {
+  try {
+    const profile = req.user as unknown as GoogleProfile;
+    const emailEntry = profile.emails?.[0];
+    const email = emailEntry?.value?.toLowerCase();
+
+    if (!email) {
+      res.redirect(`${config.FRONTEND_URL}/login?error=no_email`);
+      return;
+    }
+
+    let user =
+      (
+        await prisma.account.findUnique({
+          where: {
+            provider_providerAccountId: {
+              provider: "google",
+              providerAccountId: profile.id,
+            },
+          },
+          include: { user: true },
+        })
+      )?.user ?? null;
+
+    if (!user) {
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (existingByEmail) {
+        if (!emailEntry?.verified) {
+          res.redirect(`${config.FRONTEND_URL}/login?error=email_not_verified`);
+          return;
+        }
+
+        await prisma.account.create({
+          data: {
+            userId: existingByEmail.id,
+            provider: "google",
+            providerAccountId: profile.id,
+          },
+        });
+        user = existingByEmail;
+      } else {
+        const username = await generateUsername(email);
+
+        user = await prisma.user.create({
+          data: {
+            username,
+            fullName: profile.displayName || null,
+            email,
+            avatarUrl: profile.photos?.[0]?.value ?? null,
+            accounts: {
+              create: {
+                provider: "google",
+                providerAccountId: profile.id,
+              },
+            },
+          },
+        });
+      }
+    }
+
+    const refreshToken = generateRefreshToken(user.id);
+    res.cookie("refreshToken", refreshToken, REFRESH_COOKIE_OPTIONS);
+
+    void publish<AuthEventPayload>({
+      topic: Topics.AUTH_EVENTS,
+      key: user.id,
+      payload: {
+        type: "login",
+        userId: user.id,
+        email: user.email,
+        occurredAt: new Date().toISOString(),
+        ip: req.ip ?? null,
+        userAgent: req.get("user-agent") ?? null,
+      },
+    }).catch((err) => console.error("[auth-events] publish failed", err));
+
+    res.redirect(`${config.FRONTEND_URL}/library`);
+  } catch (error) {
+    console.error("Google auth error:", error);
+    res.redirect(`${config.FRONTEND_URL}/login?error=server_error`);
   }
 };

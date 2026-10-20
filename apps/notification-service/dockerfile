@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+
+FROM oven/bun:1-slim AS base
+
+FROM base AS pruner
+WORKDIR /app
+RUN bun add -g turbo
+COPY . .
+RUN turbo prune @repo/notification-service --docker
+
+# notification-service doesn't depend on @repo/db-prisma, so — unlike the
+# other backend apps — there's no prisma-generate step and no full-install stage.
+FROM base AS prod-deps
+WORKDIR /app
+COPY --from=pruner /app/out/json/ .
+RUN bun install --frozen-lockfile --production --omit=peer
+
+FROM oven/bun:1-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN addgroup -S -g 1001 notification-service \
+    && adduser -S -u 1001 -G notification-service notification-service
+
+COPY --from=prod-deps --chown=notification-service:notification-service /app .
+COPY --from=pruner --chown=notification-service:notification-service /app/out/full/ .
+
+USER notification-service
+EXPOSE 4003
+CMD ["bun", "./apps/notification-service/src/index.ts"]

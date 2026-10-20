@@ -75,8 +75,134 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
-      retries: 5     
+      retries: 5
+
+
+  db-migrator:
+    build:
+      context: ..
+      dockerfile: packages/db-prisma/dockerfile
+      target: migrator
+    container_name: rightsave-db-migrator
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: apps/auth-service/dockerfile
+    container_name: rightsave-auth-service
+    restart: unless-stopped
+    env_file:
+      - ../apps/auth-service/.env
+    environment:
+      NODE_ENV: production
+      AUTH_SERVICE_PORT: "4001"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: redpanda:29092
+    ports:
+      - "4001:4001"
+    depends_on:
+      db-migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+
+  api-backend:
+    build:
+      context: ..
+      dockerfile: apps/api-backend/dockerfile
+    container_name: rightsave-api-backend
+    restart: unless-stopped
+    env_file:
+      - ../apps/api-backend/.env
+    environment:
+      NODE_ENV: production
+      API_BACKEND_PORT: "4002"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: redpanda:29092
+      ML_WORKER_URL: http://ml-worker:8000
+    ports:
+      - "4002:4002"
+    depends_on:
+      db-migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: ..
+      dockerfile: apps/notification-service/dockerfile
+    container_name: rightsave-notification-service
+    restart: unless-stopped
+    env_file:
+      - ../apps/notification-service/.env
+    environment:
+      NODE_ENV: production
+      NOTIFICATION_PORT: "4003"
+      KAFKA_BROKERS: redpanda:29092
+    ports:
+      - "4003:4003"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+
+  ml-worker:
+    build:
+      context: ..
+      dockerfile: apps/ml-worker/dockerfile
+    container_name: rightsave-ml-worker
+    restart: unless-stopped
+    env_file:
+      - ../apps/ml-worker/.env
+    # Read-only DB role comes from docker/create-readonly-user.sh (run once after db is up)
+    environment:
+      PORT: "8000"
+      DATABASE_URL_READONLY: postgresql://ml_readonly:ml_readonly@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: redpanda:29092
+    ports:
+      - "8000:8000"
+    volumes:
+      - whisper-cache:/home/ml-worker/.cache/huggingface
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: apps/frontend/dockerfile
+      args:
+        # Inlined into the browser bundle, so these are host-facing URLs.
+        NEXT_PUBLIC_AUTH_API_URL: http://localhost:4001/api/v1
+        NEXT_PUBLIC_API_URL: http://localhost:4002/api/v1
+        NEXT_PUBLIC_DEMO_EMAIL: ${NEXT_PUBLIC_DEMO_EMAIL:-}
+        NEXT_PUBLIC_DEMO_PASSWORD: ${NEXT_PUBLIC_DEMO_PASSWORD:-}
+    container_name: rightsave-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+      - api-backend
 
 volumes:
   postgres_db:
   redpanda-data:
+  whisper-cache:

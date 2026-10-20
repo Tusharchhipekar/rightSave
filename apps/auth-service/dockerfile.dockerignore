@@ -1,0 +1,66 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Build output
+dist
+dist-ssr
+build
+.next
+out
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Version control
+.git
+.gitignore
+
+# Editor/IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Testing
+coverage
+
+# Misc
+README.md
+.eslintcache
+
+# Turborepo
+.turbo
+
+# Bun
+bun.lockb.bak
+.bun
+
+# Docker itself
+dockerfile*
+
+# Infra manifests and local compose (never needed to build an app image)
+k8s
+docker
+
+# Not needed to build this image — keeping these out of the build context
+# stops unrelated edits from invalidating skaffold's content-hash cache
+# and forcing a rebuild + redeploy.
+apps/api-backend/src
+apps/notification-service/src
+apps/frontend/src
+apps/frontend/public
+apps/ml-worker/src

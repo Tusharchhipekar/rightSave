@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+
+FROM python:3.12-slim AS builder
+WORKDIR /build
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+COPY apps/ml-worker/requirements.txt .
+RUN pip install -r requirements.txt
+
+FROM python:3.12-slim AS runner
+WORKDIR /app/src
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    HF_HOME=/home/ml-worker/.cache/huggingface
+
+# ffmpeg is called directly by transcribes/audio.py
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r -g 1001 ml-worker \
+    && useradd -r -u 1001 -g ml-worker -m ml-worker
+
+COPY --from=builder /opt/venv /opt/venv
+COPY --chown=ml-worker:ml-worker apps/ml-worker/src/ /app/src/
+
+USER ml-worker
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

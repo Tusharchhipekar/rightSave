@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1
+#
+# Standalone migrate image — runs `prisma migrate deploy` against
+# packages/db-prisma. Ends at a builder-derived stage (keeps devDependencies,
+# i.e. the prisma CLI) rather than a lean alpine runner, since prod images
+# never run migrations themselves. Needs DATABASE_URL at runtime.
+
+FROM oven/bun:1-slim AS base
+
+FROM base AS pruner
+WORKDIR /app
+RUN bun add -g turbo
+COPY . .
+RUN turbo prune @repo/db-prisma --docker
+
+FROM base AS builder
+WORKDIR /app
+COPY --from=pruner /app/out/json/ .
+RUN bun install --frozen-lockfile
+COPY --from=pruner /app/out/full/ .
+RUN cd packages/db-prisma && DATABASE_URL=postgresql://build:build@localhost:5432/build bunx prisma generate --config prisma7.config.ts
+
+FROM builder AS migrator
+WORKDIR /app/packages/db-prisma
+CMD ["bunx", "prisma", "migrate", "deploy", "--config", "prisma7.config.ts"]

@@ -1,0 +1,73 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Build output
+dist
+dist-ssr
+build
+.next
+out
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Version control
+.git
+.gitignore
+
+# Editor/IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Testing
+coverage
+
+# Misc
+README.md
+.eslintcache
+
+# Turborepo
+.turbo
+
+# Bun
+bun.lockb.bak
+.bun
+
+# Docker itself
+dockerfile*
+
+# Infra manifests and local compose (never needed to build an app image)
+k8s
+docker
+
+# Python
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+
+# ml-worker only needs apps/ml-worker/requirements.txt and apps/ml-worker/src.
+# Everything below is JS workspace code it never touches.
+apps/api-backend
+apps/auth-service
+apps/notification-service
+apps/frontend
+packages

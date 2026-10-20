@@ -53,12 +53,12 @@ export default function Header() {
           <div className="hidden sm:flex items-center">
             {isAuthed ? (
               <div className="flex items-center gap-space-xs">
-                <span className="text-xs text-on-surface-variant font-medium hidden md:inline">
-                  {user?.username ? `@${user.username}` : user?.email}
+                <span className="hidden md:inline px-space-sm py-1.5 rounded-lg border border-outline-variant bg-surface-container-high text-on-surface-variant font-body-sm text-body-sm font-medium">
+                  {user?.username ?? user?.email}
                 </span>
                 <Link
                   href="/logout"
-                  className="px-space-sm py-1.5 rounded-lg text-on-surface-variant font-body-sm hover:text-error hover:bg-error-container/30 transition-colors font-medium"
+                  className="px-space-sm py-1.5 rounded-lg border border-outline-variant bg-surface-container-high text-on-surface-variant font-body-sm text-body-sm font-medium hover:text-error hover:bg-error-container/30 hover:border-error/40 transition-colors"
                 >
                   Log out
                 </Link>
@@ -73,14 +73,16 @@ export default function Header() {
             )}
           </div>
 
-          {/* Desktop Speed Trial Section */}
-          <Link
-            href={isAuthed ? "/library" : "/login"}
-            className="hidden sm:flex items-center gap-space-xs px-space-md py-2 rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-body-sm hover:bg-primary hover:text-on-primary transition-all font-medium shadow-[0_2px_12px_rgba(128,131,255,0.25)]"
-          >
-            <Icon name="bolt" className="text-[18px]" />
-            <span>Start Free Trial</span>
-          </Link>
+          {/* Desktop Start Free Trial (logged-out only) */}
+          {!isAuthed && (
+            <Link
+              href="/login"
+              className="hidden sm:flex items-center gap-space-xs px-space-md py-2 rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-body-sm hover:bg-primary hover:text-on-primary transition-all font-medium shadow-[0_2px_12px_rgba(128,131,255,0.25)]"
+            >
+              <Icon name="bolt" className="text-[18px]" />
+              <span>Start Free Trial</span>
+            </Link>
+          )}
 
 
           {/* Mobile Speed Trial & Auth Icon Button */}

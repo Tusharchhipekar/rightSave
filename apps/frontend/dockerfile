@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1
+
+FROM oven/bun:1-slim AS base
+
+FROM base AS pruner
+WORKDIR /app
+RUN bun add -g turbo
+COPY . .
+RUN turbo prune frontend --docker
+
+# Builder is alpine (same libc as the runner) so native deps like sharp
+# resolve to the musl binaries that actually run in the final image.
+# NEXT_PUBLIC_* values are inlined at build time, so they are build args.
+FROM oven/bun:1-alpine AS builder
+WORKDIR /app
+ARG NEXT_PUBLIC_AUTH_API_URL
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_DEMO_EMAIL
+ARG NEXT_PUBLIC_DEMO_PASSWORD
+ENV NEXT_PUBLIC_AUTH_API_URL=$NEXT_PUBLIC_AUTH_API_URL \
+    NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_DEMO_EMAIL=$NEXT_PUBLIC_DEMO_EMAIL \
+    NEXT_PUBLIC_DEMO_PASSWORD=$NEXT_PUBLIC_DEMO_PASSWORD \
+    NEXT_TELEMETRY_DISABLED=1
+COPY --from=pruner /app/out/json/ .
+RUN bun install --frozen-lockfile
+COPY --from=pruner /app/out/full/ .
+RUN bun run --cwd apps/frontend build
+
+# `next start` needs the build output plus node_modules, and next.config.ts is
+# loaded at start — so the runner takes the builder stage wholesale.
+FROM oven/bun:1-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000
+
+RUN addgroup -S -g 1001 frontend \
+    && adduser -S -u 1001 -G frontend frontend
+
+COPY --from=builder --chown=frontend:frontend /app .
+
+USER frontend
+EXPOSE 3000
+CMD ["bun", "run", "--cwd", "apps/frontend", "start"]
