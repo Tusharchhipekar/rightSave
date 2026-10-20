@@ -1,10 +1,9 @@
-# syntax=docker/dockerfile:1
-
 FROM oven/bun:1-slim AS base
 
 FROM base AS pruner
 WORKDIR /app
-RUN bun add -g turbo
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun add -g turbo
 COPY . .
 RUN turbo prune frontend --docker
 
@@ -23,23 +22,28 @@ ENV NEXT_PUBLIC_AUTH_API_URL=$NEXT_PUBLIC_AUTH_API_URL \
     NEXT_PUBLIC_DEMO_PASSWORD=$NEXT_PUBLIC_DEMO_PASSWORD \
     NEXT_TELEMETRY_DISABLED=1
 COPY --from=pruner /app/out/json/ .
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
-RUN bun run --cwd apps/frontend build
+RUN --mount=type=cache,target=/app/apps/frontend/.next/cache \
+    bun run --cwd apps/frontend build
 
-# `next start` needs the build output plus node_modules, and next.config.ts is
-# loaded at start — so the runner takes the builder stage wholesale.
-FROM oven/bun:1-alpine AS runner
+# Standalone output: server.js plus only the traced node_modules. With
+# outputFileTracingRoot at the repo root, the app lives at apps/frontend/.
+FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    PORT=3000
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
 
 RUN addgroup -S -g 1001 frontend \
     && adduser -S -u 1001 -G frontend frontend
 
-COPY --from=builder --chown=frontend:frontend /app .
+COPY --from=builder --chown=frontend:frontend /app/apps/frontend/.next/standalone ./
+COPY --from=builder --chown=frontend:frontend /app/apps/frontend/.next/static ./apps/frontend/.next/static
+COPY --from=builder --chown=frontend:frontend /app/apps/frontend/public ./apps/frontend/public
 
 USER frontend
 EXPOSE 3000
-CMD ["bun", "run", "--cwd", "apps/frontend", "start"]
+CMD ["node", "apps/frontend/server.js"]

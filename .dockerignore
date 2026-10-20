@@ -20,4 +20,18 @@ dist-ssr
 *.log
 .DS_Store
 **/.dockerignore
- 
+ **/node_modules
+**/.next
+**/.turbo
+**/.venv
+**/__pycache__
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.vscode
+dist
+dist-ssr
+**/*.log
+.DS_Store
+**/.dockerignore

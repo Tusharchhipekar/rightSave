@@ -1,29 +1,33 @@
-# syntax=docker/dockerfile:1
 
 FROM python:3.12-slim AS builder
-WORKDIR /build
-ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+WORKDIR /app
+COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /bin/uv
+ENV UV_HTTP_TIMEOUT=300 \
+    UV_HTTP_RETRIES=5 \
+    UV_CONCURRENT_DOWNLOADS=4 \
+    UV_LINK_MODE=copy
+RUN uv venv .venv
 COPY apps/ml-worker/requirements.txt .
-RUN pip install -r requirements.txt
+# `source` doesn't persist across RUN layers, so activate and install in one RUN.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    . .venv/bin/activate && uv pip install -r requirements.txt
 
 FROM python:3.12-slim AS runner
 WORKDIR /app/src
-ENV PATH="/opt/venv/bin:$PATH" \
+# Same path as the builder (/app/.venv): a venv hardcodes its absolute path.
+ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     HF_HOME=/home/ml-worker/.cache/huggingface
 
-# ffmpeg is called directly by transcribes/audio.py
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+# Static ffmpeg (called directly by transcribes/audio.py). The apt package drags
+# in hundreds of MB of graphics/codec libs this service never uses.
+COPY --from=mwader/static-ffmpeg:7.1.1 /ffmpeg /usr/local/bin/ffmpeg
 
 RUN groupadd -r -g 1001 ml-worker \
     && useradd -r -u 1001 -g ml-worker -m ml-worker
 
-COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /app/.venv /app/.venv
 COPY --chown=ml-worker:ml-worker apps/ml-worker/src/ /app/src/
 
 USER ml-worker
