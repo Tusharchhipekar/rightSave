@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service-deployment
+  labels:
+    name: auth-service-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+      - image: auth-service:latest
+        imagePullPolicy: IfNotPresent
+        name: auth-service
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 4001
+          initialDelaySeconds: 60
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 4001
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+        env:
+        - name: KAFKA_CLIENT_ID
+          value: rightsave-auth
+        envFrom:
+        - secretRef:
+            name: database
+        - secretRef:
+            name: jwt
+        - secretRef:
+            name: kafka
+        - secretRef:
+            name: google
+        - secretRef:
+            name: auth
+        ports:
+        - containerPort: 4001
+          name: auth-service

@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-worker-deployment
+  labels:
+    name: ml-worker-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-worker
+  template:
+    metadata:
+      labels:
+        app: ml-worker
+    spec:
+      initContainers:
+      - image: pgvector/pgvector:pg16
+        name: ensure-ml-readonly
+        envFrom:
+        - secretRef:
+            name: database
+        command:
+        - sh
+        - -c
+        - |
+          i=0
+          until pg_isready -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do
+            i=$((i+1))
+            if [ "$i" -ge 60 ]; then
+              echo 'ensure-ml-readonly: database not ready' >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $do$
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ml_readonly') THEN
+              CREATE ROLE ml_readonly WITH LOGIN PASSWORD 'ml_readonly';
+            END IF;
+          END
+          $do$;
+          GRANT CONNECT ON DATABASE rightsave TO ml_readonly;
+          GRANT USAGE ON SCHEMA public TO ml_readonly;
+          GRANT SELECT ON ALL TABLES IN SCHEMA public TO ml_readonly;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO ml_readonly;
+          SQL
+      - image: busybox:1.36
+        name: wait-for-redpanda
+        command:
+        - sh
+        - -c
+        - |
+          i=0
+          until nc -z redpanda 9092; do
+            i=$((i+1))
+            if [ "$i" -ge 90 ]; then
+              echo 'wait-for-redpanda: giving up' >&2
+              exit 1
+            fi
+            echo 'wait-for-redpanda: not ready, retrying...'
+            sleep 2
+          done
+      containers:
+      - image: ml-worker:latest
+        imagePullPolicy: IfNotPresent
+        name: ml-worker
+        resources:
+          limits:
+            cpu: "1500m"
+            memory: "3Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 90
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8000
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+        env:
+        - name: KAFKA_CLIENT_ID
+          value: rightsave-ml-worker
+        envFrom:
+        - secretRef:
+            name: database
+        - secretRef:
+            name: kafka
+        - secretRef:
+            name: ml
+        ports:
+        - containerPort: 8000
+          name: ml-worker
+        volumeMounts:
+        - name: whisper-cache
+          mountPath: /home/ml-worker/.cache/huggingface
+      volumes:
+      - name: whisper-cache
+        emptyDir: {}

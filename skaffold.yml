@@ -1,0 +1,104 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+
+build:
+  local:
+    useBuildkit: true
+    push: false
+
+  tagPolicy:
+    sha256: {}
+
+  artifacts:
+    - image: db-migrator
+      context: .
+      docker:
+        dockerfile: packages/db-prisma/dockerfile
+        target: migrator
+
+    - image: api-backend
+      context: .
+      docker:
+        dockerfile: apps/api-backend/dockerfile
+      sync:
+        infer:
+          - "apps/api-backend/src/**"
+
+    - image: auth-service
+      context: .
+      docker:
+        dockerfile: apps/auth-service/dockerfile
+      sync:
+        infer:
+          - "apps/auth-service/src/**"
+
+    - image: notification-service
+      context: .
+      docker:
+        dockerfile: apps/notification-service/dockerfile
+      sync:
+        infer:
+          - "apps/notification-service/src/**"
+
+    - image: ml-worker
+      context: .
+      docker:
+        dockerfile: apps/ml-worker/dockerfile
+      sync:
+        infer:
+          - "apps/ml-worker/src/**"
+
+    - image: frontend
+      context: .
+      docker:
+        dockerfile: apps/frontend/dockerfile
+        buildArgs:
+          NEXT_PUBLIC_AUTH_API_URL: http://localhost:4001/api/v1
+          NEXT_PUBLIC_API_URL: http://localhost:4002/api/v1
+          NEXT_PUBLIC_DEMO_EMAIL: demo@rightsave.app
+          NEXT_PUBLIC_DEMO_PASSWORD: change-me-demo-123
+      sync:
+        infer:
+          - "apps/frontend/src/**"
+
+deploy:
+  statusCheckDeadlineSeconds: 600
+
+manifests:
+  rawYaml:
+    - k8s/secret.yml
+    - k8s/postgres-deployment.yml
+    - k8s/postgres-service.yml
+    - k8s/redis-deployment.yml
+    - k8s/redis-service.yml
+    - k8s/redpanda-deployment.yml
+    - k8s/redpanda-service.yml
+    - k8s/api-backend-deployment.yml
+    - k8s/api-backend-service.yml
+    - k8s/auth-service-service.yml
+    - k8s/auth-service-deployment.yml
+    - k8s/notification-service-deployment.yml
+    - k8s/notification-service-service.yml
+    - k8s/ml-worker-deployment.yml
+    - k8s/ml-worker-service.yml
+    - k8s/frontend-deployment.yml
+    - k8s/frontend-service.yml
+    - k8s/ingress.yml
+
+portForward:
+  - resourceType: service
+    resourceName: frontend
+    port: 80
+    localPort: 3000
+  - resourceType: service
+    resourceName: auth-service
+    port: 80
+    localPort: 4001
+  - resourceType: service
+    resourceName: api-backend
+    port: 80
+    localPort: 4002
+  - resourceType: service
+    resourceName: ml-worker
+    port: 80
+    localPort: 8000

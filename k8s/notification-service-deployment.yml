@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service-deployment
+  labels:
+    name: notification-service-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - image: notification-service:latest
+        imagePullPolicy: IfNotPresent
+        name: notification-service
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 4003
+          initialDelaySeconds: 60
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 4003
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+        env:
+        - name: KAFKA_CLIENT_ID
+          value: rightsave-notification
+        envFrom:
+        - secretRef:
+            name: kafka
+        - secretRef:
+            name: notification
+        ports:
+        - containerPort: 4003
+          name: notification

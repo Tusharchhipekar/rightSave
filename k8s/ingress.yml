@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rightsave-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-path: "/"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "http://localhost:3000"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, PATCH, OPTIONS, DELETE"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  labels:
+    app.kubernetes.io/name: rightsave-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - pathType: Prefix
+            path: /api/v1/auth
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 80
+          - pathType: Prefix
+            path: /api
+            backend:
+              service:
+                name: api-backend
+                port:
+                  number: 80
+          - pathType: Prefix
+            path: /webhooks/instagram
+            backend:
+              service:
+                name: api-backend
+                port:
+                  number: 80
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

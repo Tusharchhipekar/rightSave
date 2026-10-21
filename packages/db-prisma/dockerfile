@@ -3,7 +3,7 @@ FROM oven/bun:1-alpine AS migrator
 WORKDIR /app
 
 RUN echo '{"name":"migrator","private":true}' > package.json \
-    && bun add prisma@7.10.0
+    && bun add prisma@7.10.0 dotenv
 
 COPY packages/db-prisma/prisma ./prisma
 COPY packages/db-prisma/prisma7.config.ts ./

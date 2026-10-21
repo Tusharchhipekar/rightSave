@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-backend-deployment
+  labels:
+    name: api-backend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-backend
+  template:
+    metadata:
+      labels:
+        app: api-backend
+    spec:
+      initContainers:
+      - image: db-migrator:latest
+        name: db-migrate
+        command:
+        - sh
+        - -c
+        - |
+          i=0
+          until bunx prisma migrate deploy --config=./prisma7.config.ts; do
+            i=$((i+1))
+            if [ "$i" -ge 60 ]; then
+              echo 'db-migrate: giving up waiting for database' >&2
+              exit 1
+            fi
+            echo 'db-migrate: database not ready, retrying...'
+            sleep 2
+          done
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database
+              key: DATABASE_URL
+      containers:
+      - image: api-backend:latest
+        imagePullPolicy: IfNotPresent
+        name: api-backend
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+          requests:
+            cpu: "250m"
+            memory: "250Mi"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 4002
+          initialDelaySeconds: 60
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 4002
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+        env:
+        - name: KAFKA_CLIENT_ID
+          value: rightsave-api
+        envFrom:
+        - secretRef:
+            name: database
+        - secretRef:
+            name: jwt
+        - secretRef:
+            name: kafka
+        - secretRef:
+            name: api
+        ports:
+        - containerPort: 4002
+          name: api-backend
