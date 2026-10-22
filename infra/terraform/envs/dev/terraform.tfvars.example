@@ -1,0 +1,3 @@
+region       = "ap-south-1"
+cluster_name = "rightsave-dev"
+my_ip_cidr   = "YOUR.IP.HERE/32"
