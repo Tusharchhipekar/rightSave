@@ -71,3 +71,7 @@ apps/auth-service
 apps/notification-service
 apps/frontend
 packages
+infra
+**/.terraform/
+*.tfstate
+*.tfstate.*

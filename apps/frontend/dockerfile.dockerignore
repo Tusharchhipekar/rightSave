@@ -63,3 +63,7 @@ apps/api-backend/src
 apps/auth-service/src
 apps/notification-service/src
 apps/ml-worker/src
+infra
+**/.terraform/
+*.tfstate
+*.tfstate.*

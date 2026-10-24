@@ -64,3 +64,7 @@ apps/auth-service/src
 apps/frontend/src
 apps/frontend/public
 apps/ml-worker/src
+infra
+**/.terraform/
+*.tfstate
+*.tfstate.*

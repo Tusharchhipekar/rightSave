@@ -104,12 +104,14 @@ portForward:
     localPort: 8000
 
 
-profiles:
-  - name: eks
-    patches:
-      - op: replace
-        path: /build/local/push
-        value: true
-      - op: add
-        path: /build/platforms
-        value: ["linux/amd64"]
+##profiles:
+##  - name: eks
+##   patches:
+##     - op: replace
+##        path: /build/local/push
+##        value: true
+##      - op: add
+##        path: /build/platforms
+##        value: ["linux/amd64"]
+
+      
